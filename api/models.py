@@ -77,6 +77,19 @@ class Colleague(AbstractBaseUser):
         verbose_name_plural = "Colleagues"
 
 
+class ResetPassword(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    email = models.EmailField()
+    token = models.CharField(unique=True, db_index=True, max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.token}"
+
+    class Meta:
+        db_table = "resetpassword"
+
+
 class ProductType(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=255, db_index=True)

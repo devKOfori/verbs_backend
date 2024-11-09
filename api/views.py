@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from .models import Colleague, Product, Order
+from .models import Colleague, Product, Order, ResetPassword
 from .serializers import (
     CreateColleagueSerializer,
     ColleagueSerializer,
@@ -8,9 +8,11 @@ from .serializers import (
     OrderDetailSerializer,
     OrderListSerializer,
     OrderEditSerializer,
+    ResetPasswordSerializer
 )
 from rest_framework import generics
 from rest_framework import permissions
+from rest_framework.views import APIView
 
 # Create your views here.
 
@@ -30,6 +32,10 @@ class ColleagueDetail(generics.RetrieveUpdateDestroyAPIView):
     exclude = ["password", "country"]
     # permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+
+class ResetPasswordView(generics.CreateAPIView):
+    queryset = ResetPassword.objects.all()
+    serializer_class = ResetPasswordSerializer
 
 class ProductList(generics.ListAPIView):
     serializer_class = ProductListSerializer

@@ -11,10 +11,11 @@ from .models import (
     Order,
     OrderItems,
     OrderStatus,
+    ResetPassword,
 )
 import uuid
 from helpers.system_variables import TAX_PERCENTAGE, UNREGISTERED_USER_EMAIL
-from helpers.generators import generate_tax
+from helpers.generators import generate_tax, generate_reset_password_token
 
 
 class CreateColleagueSerializer(serializers.ModelSerializer):
@@ -45,6 +46,21 @@ class ColleagueSerializer(serializers.ModelSerializer):
         model = Colleague
         exclude = ["password", "country"]
 
+
+class ResetPasswordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ResetPassword
+        fields = ["email"]
+
+    def create(self, validated_data):
+        email = validated_data.get("email")
+        if not Colleague.objects.filter(email=email).exists():
+            raise exceptions.APIException("Email not found", code=status.HTTP_400_BAD_REQUEST)
+        reset_password = ResetPassword.objects.create(
+            email=email,
+            token=generate_reset_password_token()
+        )
+        return reset_password
 
 class ProductTypeSerializer(serializers.ModelSerializer):
     class Meta:
