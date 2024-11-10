@@ -8,6 +8,7 @@ from helpers.defaults import (
     product_grade_default,
     product_type_default,
     ORDER_QTY_DEFAULT,
+    RESET_PASSWORD_STATUS_DEFAULT,
     order_status_default,
     order_payment_status_default,
 )
@@ -77,11 +78,23 @@ class Colleague(AbstractBaseUser):
         verbose_name_plural = "Colleagues"
 
 
+RESET_PASSWORD_STATUS_CHOICES = {
+    ("new", "New"),
+    ("used", "Used"),
+    ("expired", "Expired"),
+}
+
+
 class ResetPassword(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     email = models.EmailField()
     token = models.CharField(unique=True, db_index=True, max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(
+        max_length=7,
+        choices=RESET_PASSWORD_STATUS_CHOICES,
+        default=RESET_PASSWORD_STATUS_DEFAULT,
+    )
 
     def __str__(self) -> str:
         return f"{self.token}"

@@ -1,3 +1,6 @@
+import datetime
+from django.core.mail import EmailMessage
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import exceptions
 from rest_framework import serializers
 from rest_framework import status
@@ -54,13 +57,42 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         email = validated_data.get("email")
+        token = generate_reset_password_token()
         if not Colleague.objects.filter(email=email).exists():
-            raise exceptions.APIException("Email not found", code=status.HTTP_400_BAD_REQUEST)
+            raise exceptions.ValidationError("Email not found", code=status.HTTP_400_BAD_REQUEST)
         reset_password = ResetPassword.objects.create(
             email=email,
-            token=generate_reset_password_token()
+            token=token,
         )
+        if reset_password:
+            email = EmailMessage(
+                subject="Password reset request",
+                body=f"Follow the link to reset your password http://localhost:8000/reset?token={token}",
+                from_email="oforimensahebenezer07@gmail.com",
+                to=["quameophory@yahoo.com"]
+            )
+            email.send()
         return reset_password
+    
+class SetNewPasswordSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True)
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+    
+    def save(self, **kwargs):
+        token = self.validated_data["token"]
+        new_password = self.validated_data["new_password"]
+        try:
+            reset_password = ResetPassword.objects.get(token=token)
+            colleague = Colleague.objects.get(email=reset_password.email)
+            colleague.set_password(new_password)
+            colleague.save()
+            reset_password.delete()
+        except ResetPassword.DoesNotExist:
+            raise serializers.ValidationError("Invalid or expired token")
 
 class ProductTypeSerializer(serializers.ModelSerializer):
     class Meta:
