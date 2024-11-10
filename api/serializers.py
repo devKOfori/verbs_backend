@@ -59,7 +59,7 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
         email = validated_data.get("email")
         token = generate_reset_password_token()
         if not Colleague.objects.filter(email=email).exists():
-            raise exceptions.ValidationError("Email not found", code=status.HTTP_400_BAD_REQUEST)
+            raise serializers.ValidationError("Email not found", code=status.HTTP_400_BAD_REQUEST)
         reset_password = ResetPassword.objects.create(
             email=email,
             token=token,
