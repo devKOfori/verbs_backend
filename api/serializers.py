@@ -245,14 +245,14 @@ class ProductCreateSerializer(serializers.ModelSerializer):
     product_type = ProductTypeSerializer()
     grade = ProductGradeSerializer()
     images = ProductImageSerializer(many=True)
-    # product_dimensions = ProductDimensionSerializer(many=True)
-    reviews = ProductReviewSerializer(many=True)
+    reviews = ProductReviewSerializer(many=True, read_only=True)
     themes = ThoughtThemeSerializer(many=True)
     specifications = ProductSpecificationSerializer(many=True)
 
     class Meta:
         model = Product
         fields = [
+            "id",
             "name",
             "product_type",
             "grade",
@@ -263,16 +263,17 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "reviews",
             "return_policy",
         ]
+        read_only_fields = ["id"]
 
     def create(self, validated_data: dict):
 
-        default_type, _ = ProductType.objects.get_or_create(name="Default Type")
-        default_grade, _ = ProductGrade.objects.get_or_create(name="Default Grade")
-        default_theme, _ = ThoughtTheme.objects.get_or_create(name="Default Theme")
-        default_color, _ = Color.objects.get_or_create(
+        self.default_type, _ = ProductType.objects.get_or_create(name="Default Type")
+        self.default_grade, _ = ProductGrade.objects.get_or_create(name="Default Grade")
+        self.default_theme, _ = ThoughtTheme.objects.get_or_create(name="Default Theme")
+        self.default_color, _ = Color.objects.get_or_create(
             name="Default Color", defaults={"code": "default"}
         )
-        default_frame_type, _ = frame_type = FrameType.objects.get_or_create(
+        self.default_frame_type, _ = frame_type = FrameType.objects.get_or_create(
             name="Default Type"
         )
 
@@ -280,12 +281,11 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         grade_data = validated_data.pop("grade", {})
         themes_data = validated_data.pop("themes", [])
         images_data = validated_data.pop("images", [])
-        reviews_data = validated_data.pop("reviews", [])
         specifications_data = validated_data.pop("specifications", [])
 
         product_type = None
         if not product_type_data:
-            product_type = default_type
+            product_type = self.default_type
         else:
             if "name" in product_type_data:
                 product_type, _ = ProductType.objects.get_or_create(
@@ -294,7 +294,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
         grade = None
         if not grade_data:
-            grade = default_grade
+            grade = self.default_grade
         else:
             if "name" in grade_data:
                 grade, _ = ProductGrade.objects.get_or_create(name=grade_data["name"])
@@ -308,7 +308,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
             thought_themes = []
             if not themes_data:
-                thought_themes.append(default_theme)
+                thought_themes.append(self.default_theme)
             else:
                 thought_themes = [
                     ThoughtTheme.objects.get_or_create(name=theme_data["name"])[0]
@@ -326,14 +326,6 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                 ]
             )
 
-            # Create reviews and link to product
-            ProductReview.objects.bulk_create(
-                [
-                    ProductReview(product=product, **review_data)
-                    for review_data in reviews_data
-                ]
-            )
-
             if specifications_data:
                 for specification_data in specifications_data:
                     dimension_data = specification_data.pop("dimension", {})
@@ -345,14 +337,14 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
                     color_data = specification_data.pop("color", {})
                     color = (
-                        default_color
+                        self.default_color
                         if not color_data
                         else Color.objects.create(**color_data)
                     )
 
                     frame_type_data = specification_data.pop("frame_type", {})
                     frame_type = (
-                        default_frame_type
+                        self.default_frame_type
                         if not frame_type_data
                         else FrameType.objects.create(**frame_type_data)
                     )
@@ -366,6 +358,85 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                     )
             return product
 
+    def update(self, instance, validated_data):
+        product_type_data = validated_data.pop("product_type", {})
+        grade_data = validated_data.pop("grade", {})
+        themes_data = validated_data.pop("themes", [])
+        images_data = validated_data.pop("images", [])
+        specifications_data = validated_data.pop("specifications", [])
+
+        product_type = None
+        if not product_type_data:
+            product_type = self.default_type
+        else:
+            if "name" in product_type_data:
+                product_type, _ = ProductType.objects.get_or_create(
+                    name=product_type_data["name"]
+                )
+
+        grade = None
+        if not grade_data:
+            grade = self.default_grade
+        else:
+            if "name" in grade_data:
+                grade, _ = ProductGrade.objects.get_or_create(name=grade_data["name"])
+
+        with transaction.atomic():
+            instance.name = validated_data.get("name", instance.name)
+            instance.product_type = product_type
+            instance.grade = grade
+
+            thought_themes = []
+            if not themes_data:
+                thought_themes.append(self.default_theme)
+            else:
+                thought_themes = [
+                    ThoughtTheme.objects.get_or_create(name=theme_data["name"])[0]
+                    for theme_data in themes_data
+                    if "name" in theme_data
+                ]
+
+            instance.themes.set(thought_themes)
+
+            ProductImage.objects.bulk_create(
+                [
+                    ProductImage(product=instance, **image_data)
+                    for image_data in images_data
+                ]
+            )
+            instance.description = validated_data.get("description", "")
+
+            if specifications_data:
+                for specification_data in specifications_data:
+                    dimension_data = specification_data.pop("dimension", {})
+                    dimension = (
+                        None
+                        if not dimension_data
+                        else Dimension.objects.create(**dimension_data)
+                    )
+
+                    color_data = specification_data.pop("color", {})
+                    color = (
+                        self.default_color
+                        if not color_data
+                        else Color.objects.create(**color_data)
+                    )
+
+                    frame_type_data = specification_data.pop("frame_type", {})
+                    frame_type = (
+                        self.default_frame_type
+                        if not frame_type_data
+                        else FrameType.objects.create(**frame_type_data)
+                    )
+
+                    ProductSpecification.objects.create(
+                        product=instance,
+                        dimension=dimension,
+                        color=color,
+                        frame_type=frame_type,
+                        **specification_data,
+                    )
+            return instance
 
 
 class OrderStatusSerializer(serializers.ModelSerializer):

@@ -111,7 +111,7 @@ class ProductCreate(generics.CreateAPIView):
 
 
 class ProductDetail(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = ProductDetailSerializer
+    serializer_class = ProductCreateSerializer
     queryset = Product.objects.all()
 
 
