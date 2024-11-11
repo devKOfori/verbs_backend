@@ -8,9 +8,12 @@ from helpers.defaults import (
     product_grade_default,
     product_type_default,
     ORDER_QTY_DEFAULT,
+    PRODUCT_QTY_DEFAULT,
     RESET_PASSWORD_STATUS_DEFAULT,
     order_status_default,
     order_payment_status_default,
+    product_frame_type_default,
+    product_color_default,
 )
 from helpers.storage_paths import product_image_storage_path
 from helpers.generators import generate_order_number
@@ -104,6 +107,7 @@ class ResetPassword(models.Model):
 
 
 class ProductType(models.Model):
+    # eg. frame, other merch
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=255, db_index=True)
 
@@ -112,11 +116,57 @@ class ProductType(models.Model):
 
 
 class ProductGrade(models.Model):
+    # eg. essential, classic, premium, signature
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=255, db_index=True)
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        db_table = "productgrade"
+
+
+class ThoughtTheme(models.Model):
+    # eg. self-discovery, etc.
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = "thoughtheme"
+        verbose_name = "Thought Theme"
+        verbose_name_plural = "Thought Themes"
+
+
+class Color(models.Model):
+    # eg. black, etc.
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255, db_index=True)
+    code = models.CharField(max_length=16, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = "color"
+        verbose_name = "Color"
+        verbose_name_plural = "Colors"
+
+
+class FrameType(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = "frametype"
+        verbose_name = "Frame Type"
+        verbose_name_plural = "Frame Types"
 
 
 class Product(models.Model):
@@ -134,18 +184,10 @@ class Product(models.Model):
         default=product_grade_default,
         related_name="products",
     )
-    unit_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-    availability = models.BooleanField(default=True)
+    themes = models.ManyToManyField(ThoughtTheme, related_name="products")
     description = models.TextField(default="-")
-    specifications = models.TextField(blank=True, null=True)
-    shipping_cost = models.PositiveIntegerField(default=0)
-    shipping_cost_percentage = models.PositiveIntegerField(
-        validators=[validate_shipping_cost_percentage], default=0
-    )
-    width = models.PositiveIntegerField(default=1)
-    height = models.PositiveIntegerField(default=1)
-    weight = models.PositiveIntegerField(default=0)
     return_policy = models.TextField(blank=True, null=True)
+    added_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:
         return self.name
@@ -154,6 +196,64 @@ class Product(models.Model):
         db_table = "product"
         verbose_name = "Product"
         verbose_name_plural = "Products"
+        ordering = ["-added_at"]
+
+
+class Dimension(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    width = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
+    height = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
+
+    def __str__(self) -> str:
+        return f"{self.width}x{self.height}"
+
+    class Meta:
+        db_table = "dimension"
+
+
+class ProductSpecification(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name="specifications"
+    )
+    dimension = models.ForeignKey(Dimension, on_delete=models.SET_NULL, null=True)
+    color = models.ForeignKey(
+        Color, on_delete=models.SET_DEFAULT, default=product_color_default
+    )
+    frame_type = models.ForeignKey(
+        FrameType, on_delete=models.SET_DEFAULT, default=product_frame_type_default
+    )
+    weight = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
+    unit_price = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    qty = models.PositiveIntegerField(default=PRODUCT_QTY_DEFAULT)
+
+    def __str__(self) -> str:
+        return self.product
+
+    class Meta:
+        db_table = "productspecification"
+        verbose_name = "Product Specification"
+        verbose_name_plural = "Product Specifications"
+
+
+class ProductDimensions(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name="product_dimensions"
+    )
+    dimension = models.ForeignKey(
+        Dimension, on_delete=models.CASCADE, related_name="products"
+    )
+    weight = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
+    unit_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+
+    def __str__(self) -> str:
+        return f"{self.dimension.width}x{self.dimension.height}"
+
+    class Meta:
+        db_table = "productdimension"
+        verbose_name = "Product Dimension"
+        verbose_name_plural = "Product Dimensions"
 
 
 class ProductImage(models.Model):

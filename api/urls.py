@@ -9,6 +9,7 @@ urlpatterns = [
     path("users/", views.ColleagueList.as_view()),
     path("users/<uuid:pk>/", views.ColleagueDetail.as_view()),
     path("products/", views.ProductList.as_view()),
+    path("products/add/", views.ProductCreate.as_view(), name="create-product"),
     path("products/<uuid:pk>/", views.ProductDetail.as_view(), name="product-detail"),
     path("orders/", views.OrderList.as_view()),
     path("orders/add/", views.OrderCreate.as_view()),

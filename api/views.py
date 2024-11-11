@@ -6,6 +6,7 @@ from .serializers import (
     ColleagueSerializer,
     ProductListSerializer,
     ProductDetailSerializer,
+    ProductCreateSerializer,
     OrderDetailSerializer,
     OrderListSerializer,
     OrderEditSerializer,
@@ -101,6 +102,11 @@ class ResetPasswordTokenView(generics.GenericAPIView):
 
 class ProductList(generics.ListAPIView):
     serializer_class = ProductListSerializer
+    queryset = Product.objects.all()
+
+
+class ProductCreate(generics.CreateAPIView):
+    serializer_class = ProductCreateSerializer
     queryset = Product.objects.all()
 
 
