@@ -1,12 +1,10 @@
 import pytz
-from django.shortcuts import render
 from .models import Colleague, Product, Order, ResetPassword
 from .serializers import (
     CreateColleagueSerializer,
     ColleagueSerializer,
     ProductListSerializer,
-    ProductDetailSerializer,
-    ProductCreateSerializer,
+    ProductSerializer,
     OrderDetailSerializer,
     OrderListSerializer,
     OrderEditSerializer,
@@ -17,9 +15,10 @@ from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import permissions, exceptions, status
-from rest_framework.views import APIView
 from datetime import datetime, timedelta
 from helpers.defaults import TOKEN_EXPIRY_HOURS
+import django_filters
+from django_filters import rest_framework as filters
 
 # Create your views here.
 
@@ -100,18 +99,36 @@ class ResetPasswordTokenView(generics.GenericAPIView):
             )
 
 
+class ProductFilter(django_filters.FilterSet):
+    unit_price = django_filters.RangeFilter()
+
+    class Meta:
+        model = Product
+        fields = {
+            "name": ["exact"],
+            "grade__name": ["exact"],
+            "themes__name": ["exact"],
+            "sizes__width": ["lte", "gte"],
+            "sizes__height": ["lte", "gte"],
+            "weight": ["lte", "gte"],
+            "colors__name": ["exact"],
+        }
+
+
 class ProductList(generics.ListAPIView):
     serializer_class = ProductListSerializer
     queryset = Product.objects.all()
+    filter_backends = [filters.DjangoFilterBackend]
+    filterset_class = ProductFilter
 
 
 class ProductCreate(generics.CreateAPIView):
-    serializer_class = ProductCreateSerializer
+    serializer_class = ProductSerializer
     queryset = Product.objects.all()
 
 
 class ProductDetail(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = ProductCreateSerializer
+    serializer_class = ProductSerializer
     queryset = Product.objects.all()
 
 

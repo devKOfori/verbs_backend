@@ -5,7 +5,11 @@ from api import views
 urlpatterns = [
     path("register/", views.RegisterColleague.as_view(), name="register"),
     path("reset-password/", views.ResetPasswordView.as_view(), name="reset-password"),
-    path("reset-password/<str:token>/", views.ResetPasswordTokenView.as_view(), name="reset-password-token"),
+    path(
+        "reset-password/<str:token>/",
+        views.ResetPasswordTokenView.as_view(),
+        name="reset-password-token",
+    ),
     path("users/", views.ColleagueList.as_view()),
     path("users/<uuid:pk>/", views.ColleagueDetail.as_view()),
     path("products/", views.ProductList.as_view()),

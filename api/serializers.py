@@ -1,6 +1,6 @@
 import datetime
 from django.core.mail import EmailMessage
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import exceptions
 from rest_framework import serializers
@@ -19,8 +19,6 @@ from .models import (
     Color,
     ThoughtTheme,
     Dimension,
-    ProductDimensions,
-    ProductSpecification,
     FrameType,
 )
 import uuid
@@ -166,41 +164,13 @@ class DimensionSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
-class ProductDimensionSerializer(serializers.ModelSerializer):
-    dimension = DimensionSerializer()
-    width = serializers.IntegerField(read_only=True)
-    height = serializers.IntegerField(read_only=True)
-
-    class Meta:
-        model = ProductDimensions
-        fields = ["id", "dimension", "width", "height", "weight", "unit_cost"]
-
-
-class ProductSpecificationSerializer(serializers.ModelSerializer):
-    dimension = DimensionSerializer()
-    frame_type = FrameTypeSerializer()
-    color = ColorSerializer()
-
-    class Meta:
-        model = ProductSpecification
-        fields = [
-            "id",
-            "dimension",
-            "color",
-            "frame_type",
-            "weight",
-            "unit_price",
-            "qty",
-        ]
-        read_only_fields = ["id"]
-
-
 class ProductListSerializer(serializers.HyperlinkedModelSerializer):
     product_type = serializers.SlugRelatedField(slug_field="name", read_only=True)
     grade = serializers.SlugRelatedField(slug_field="name", read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
     themes = serializers.SlugRelatedField(slug_field="name", many=True, read_only=True)
-    specifications = ProductSpecificationSerializer(many=True)
+    sizes = DimensionSerializer(many=True)
+    colors = ColorSerializer(many=True)
 
     class Meta:
         model = Product
@@ -208,11 +178,13 @@ class ProductListSerializer(serializers.HyperlinkedModelSerializer):
             "url",
             "id",
             "name",
+            "colors",
             "themes",
             "product_type",
             "grade",
             "images",
-            "specifications",
+            "sizes",
+            "unit_price",
         ]
 
 
@@ -223,7 +195,6 @@ class ProductDetailSerializer(serializers.HyperlinkedModelSerializer):
     # product_dimensions = ProductDimensionSerializer(many=True, read_only=True)
     reviews = ProductReviewSerializer(many=True, read_only=True)
     themes = ThoughtThemeSerializer(many=True, read_only=True)
-    specifications = ProductSpecificationSerializer(many=True)
 
     class Meta:
         model = Product
@@ -241,13 +212,25 @@ class ProductDetailSerializer(serializers.HyperlinkedModelSerializer):
         ]
 
 
-class ProductCreateSerializer(serializers.ModelSerializer):
+class ProductDisplaySerializer(serializers.ModelSerializer):
+    product_type = serializers.StringRelatedField()
+    grade = serializers.StringRelatedField()
+    themes = serializers.StringRelatedField(many=True)
+
+    class Meta:
+        model = Product
+        fields = ["name", "product_type", "grade", "themes"]
+
+
+class ProductSerializer(serializers.ModelSerializer):
     product_type = ProductTypeSerializer()
     grade = ProductGradeSerializer()
     images = ProductImageSerializer(many=True)
     reviews = ProductReviewSerializer(many=True, read_only=True)
     themes = ThoughtThemeSerializer(many=True)
-    specifications = ProductSpecificationSerializer(many=True)
+    colors = ColorSerializer(many=True)
+    frame_types = FrameTypeSerializer(many=True)
+    sizes = DimensionSerializer(many=True)
 
     class Meta:
         model = Product
@@ -257,16 +240,20 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             "product_type",
             "grade",
             "themes",
+            "sizes",
+            "weight",
+            "colors",
+            "frame_types",
+            "unit_price",
+            "qty",
             "description",
-            "specifications",
             "images",
-            "reviews",
             "return_policy",
+            "reviews",
         ]
         read_only_fields = ["id"]
 
     def create(self, validated_data: dict):
-
         self.default_type, _ = ProductType.objects.get_or_create(name="Default Type")
         self.default_grade, _ = ProductGrade.objects.get_or_create(name="Default Grade")
         self.default_theme, _ = ThoughtTheme.objects.get_or_create(name="Default Theme")
@@ -281,7 +268,9 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         grade_data = validated_data.pop("grade", {})
         themes_data = validated_data.pop("themes", [])
         images_data = validated_data.pop("images", [])
-        specifications_data = validated_data.pop("specifications", [])
+        sizes_data = validated_data.pop("sizes", [])
+        colors_data = validated_data.pop("colors", [])
+        frame_types_data = validated_data.pop("frame_types", [])
 
         product_type = None
         if not product_type_data:
@@ -318,6 +307,36 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
             product.themes.set(thought_themes)
 
+            if sizes_data:
+                sizes = [
+                    Dimension.objects.get_or_create(
+                        width=size_data["width"], height=size_data["height"]
+                    )[0]
+                    for size_data in sizes_data
+                ]
+                product.sizes.set(sizes)
+
+            colors = []
+            if colors_data:
+                colors = [
+                    Color.objects.get_or_create(**color_data)[0]
+                    for color_data in colors_data
+                ]
+            else:
+                colors.append(self.default_color)
+
+            product.colors.set(colors)
+
+            frame_types = []
+            if frame_types_data:
+                frame_types = [
+                    FrameType.objects.get_or_create(**frame_type_data)[0]
+                    for frame_type_data in frame_types_data
+                ]
+            else:
+                frame_types.append(self.default_frame_type)
+            product.frame_types.set(frame_types)
+
             # Create images and link to product
             ProductImage.objects.bulk_create(
                 [
@@ -326,36 +345,6 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                 ]
             )
 
-            if specifications_data:
-                for specification_data in specifications_data:
-                    dimension_data = specification_data.pop("dimension", {})
-                    dimension = (
-                        None
-                        if not dimension_data
-                        else Dimension.objects.create(**dimension_data)
-                    )
-
-                    color_data = specification_data.pop("color", {})
-                    color = (
-                        self.default_color
-                        if not color_data
-                        else Color.objects.create(**color_data)
-                    )
-
-                    frame_type_data = specification_data.pop("frame_type", {})
-                    frame_type = (
-                        self.default_frame_type
-                        if not frame_type_data
-                        else FrameType.objects.create(**frame_type_data)
-                    )
-
-                    ProductSpecification.objects.create(
-                        product=product,
-                        dimension=dimension,
-                        color=color,
-                        frame_type=frame_type,
-                        **specification_data,
-                    )
             return product
 
     def update(self, instance, validated_data):
@@ -363,7 +352,9 @@ class ProductCreateSerializer(serializers.ModelSerializer):
         grade_data = validated_data.pop("grade", {})
         themes_data = validated_data.pop("themes", [])
         images_data = validated_data.pop("images", [])
-        specifications_data = validated_data.pop("specifications", [])
+        sizes_data = validated_data.pop("sizes", [])
+        colors_data = validated_data.pop("colors", [])
+        frame_types_data = validated_data.pop("frame_types", [])
 
         product_type = None
         if not product_type_data:
@@ -382,8 +373,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                 grade, _ = ProductGrade.objects.get_or_create(name=grade_data["name"])
 
         with transaction.atomic():
-            instance.name = validated_data.get("name", instance.name)
-            instance.product_type = product_type
+            instance.name = validated_data.get("name")
             instance.grade = grade
 
             thought_themes = []
@@ -398,6 +388,36 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
             instance.themes.set(thought_themes)
 
+            if sizes_data:
+                sizes = [
+                    Dimension.objects.get_or_create(
+                        width=size_data["width"], height=size_data["height"]
+                    )[0]
+                    for size_data in sizes_data
+                ]
+                instance.sizes.set(sizes)
+
+            colors = []
+            if colors_data:
+                colors = [
+                    Color.objects.get_or_create(**color_data)[0]
+                    for color_data in colors_data
+                ]
+            else:
+                colors.append(self.default_color)
+
+            instance.colors.set(colors)
+
+            frame_types = []
+            if frame_types_data:
+                frame_types = [
+                    FrameType.objects.get_or_create(**frame_type_data)[0]
+                    for frame_type_data in frame_types_data
+                ]
+            else:
+                frame_types.append(self.default_frame_type)
+            instance.frame_types.set(frame_types)
+
             ProductImage.objects.bulk_create(
                 [
                     ProductImage(product=instance, **image_data)
@@ -405,37 +425,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
                 ]
             )
             instance.description = validated_data.get("description", "")
-
-            if specifications_data:
-                for specification_data in specifications_data:
-                    dimension_data = specification_data.pop("dimension", {})
-                    dimension = (
-                        None
-                        if not dimension_data
-                        else Dimension.objects.create(**dimension_data)
-                    )
-
-                    color_data = specification_data.pop("color", {})
-                    color = (
-                        self.default_color
-                        if not color_data
-                        else Color.objects.create(**color_data)
-                    )
-
-                    frame_type_data = specification_data.pop("frame_type", {})
-                    frame_type = (
-                        self.default_frame_type
-                        if not frame_type_data
-                        else FrameType.objects.create(**frame_type_data)
-                    )
-
-                    ProductSpecification.objects.create(
-                        product=instance,
-                        dimension=dimension,
-                        color=color,
-                        frame_type=frame_type,
-                        **specification_data,
-                    )
+            instance.save()
             return instance
 
 
@@ -446,11 +436,10 @@ class OrderStatusSerializer(serializers.ModelSerializer):
 
 
 class OrderItemsSerializer(serializers.ModelSerializer):
-    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
-
     class Meta:
         model = OrderItems
-        fields = ["product", "qty"]
+        fields = ["product", "qty", "tax", "discount", "promo_code", "item_cost"]
+        read_only_fields = ["id", "item_cost"]
 
 
 class OrderListSerializer(serializers.HyperlinkedModelSerializer):
@@ -469,8 +458,8 @@ class OrderListSerializer(serializers.HyperlinkedModelSerializer):
             "first_name",
             "last_name",
             "status",
-            "items_cost",
-            "items_count",
+            "total_items_count",
+            "total_items_cost",
         ]
 
 
