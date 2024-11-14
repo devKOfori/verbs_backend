@@ -8,7 +8,14 @@ PRODUCT_QTY_DEFAULT = 1
 
 TOKEN_EXPIRY_HOURS = 10
 
+ITEM_TAX_DEFAULT = 0
+
 RESET_PASSWORD_STATUS_DEFAULT = "new"
+
+def default_payment_status():
+    OrderPaymentStatus = apps.get_model("api", "OrderPaymentStatus")
+    default_payment_status, _ = OrderPaymentStatus.objects.get_or_create("Default Status")
+    return default_payment_status
 
 def product_grade_default():
     ProductGrade = apps.get_model('api', 'ProductGrade')

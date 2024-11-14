@@ -5,6 +5,7 @@ from .serializers import (
     ColleagueSerializer,
     ProductListSerializer,
     ProductSerializer,
+    OrderSerializer,
     OrderDetailSerializer,
     OrderListSerializer,
     OrderEditSerializer,
@@ -138,7 +139,7 @@ class OrderList(generics.ListAPIView):
 
 
 class OrderCreate(generics.CreateAPIView):
-    serializer_class = OrderDetailSerializer
+    serializer_class = OrderSerializer
     queryset = Order.objects.all()
 
 

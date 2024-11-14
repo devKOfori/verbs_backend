@@ -198,6 +198,7 @@ class Product(models.Model):
     qty = models.PositiveIntegerField(default=PRODUCT_QTY_DEFAULT)
     description = models.TextField(default="-")
     return_policy = models.TextField(blank=True, null=True)
+    discount = models.DecimalField(max_digits=3, decimal_places=1, default=0.00)
 
     added_at = models.DateTimeField(auto_now_add=True)
 
@@ -329,16 +330,25 @@ class Order(models.Model):
 class OrderItems(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name="orders"
+    )
     qty = models.PositiveIntegerField(default=ORDER_QTY_DEFAULT)
     tax = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
     discount = models.DecimalField(max_digits=3, decimal_places=1, default=0)
     promo_code = models.ForeignKey(PromoCode, on_delete=models.SET_NULL, null=True)
-    item_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    product_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    total_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 
     def __str__(self) -> str:
         return self.product
 
+    def get_total_cost(self):
+        """
+        this method returns the final cost of an ordered product
+        """
+        return
+    
     class Meta:
         db_table = "orderitem"
         verbose_name = "Order Item"
@@ -373,7 +383,9 @@ class OrderStatus(models.Model):
 
 class ShippingInfo(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.OneToOneField(
+        Order, on_delete=models.CASCADE, related_name="shipping_info"
+    )
     shipping_country = CountryField()
     shipping_address = models.TextField(blank=True, null=True)
     shipping_cost = models.DecimalField(max_digits=4, decimal_places=2)
