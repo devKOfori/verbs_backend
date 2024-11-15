@@ -668,6 +668,7 @@ class OrderSerializer(serializers.ModelSerializer):
     status = OrderStatusSerializer(read_only=True)
     payment_status = serializers.StringRelatedField(read_only=True)
     shipping_info = ShippingInfoSerializer()
+    added_by = serializers.StringRelatedField()
 
     class Meta:
         model = Order
@@ -688,6 +689,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "total_order_cost",
             "payment_status",
             "shipping_info",
+            "added_by",
             "first_name",
             "last_name",
             "email",
@@ -701,6 +703,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "shipping_cost",
             "total_order_cost",
             "payment_status",
+            "added_by",
         ]
 
     def validate(self, data: dict):
@@ -803,7 +806,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 ordered_product.discount = ordered_product.product.discount
                 ordered_product.promo_code = None
                 ordered_product.product_order_cost = (
-                    ordered_product.product.unit_price * qty
+                    ordered_product.calculate_ordered_product_price
                 )
                 ordered_product.total_cost = 0
                 ordered_product.save()

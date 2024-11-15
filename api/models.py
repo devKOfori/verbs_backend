@@ -352,6 +352,12 @@ class OrderItems(models.Model):
         """
         ordered_product_price = (((100 - (self.product.discount))/100) * self.product.unit_price) * self.qty
         return ordered_product_price
+    
+    @property
+    def calculate_ordered_product_total_cost(self):
+        if not self.promo_code:
+            return self.calculate_ordered_product_price
+        return self.calculate_ordered_product_price - self.promo_code.value
 
     def get_total_cost(self):
         """
