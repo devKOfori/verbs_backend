@@ -16,12 +16,12 @@ urlpatterns = [
     path("products/add/", views.ProductCreate.as_view(), name="create-product"),
     path("products/<uuid:pk>/", views.ProductDetail.as_view(), name="product-detail"),
     path("orders/", views.OrderList.as_view()),
-    path("orders/add/", views.OrderCreate.as_view()),
-    path(
-        "orders/<str:order_number>/", views.OrderDetail.as_view(), name="order-detail"
-    ),
-    path(
-        "orders/<str:order_number>/edit", views.OrderEdit.as_view(), name="order-edit"
-    ),
+    path("orders/add/", views.OrderCreate.as_view(), name="create-order"),
+    # path(
+    #     "orders/<str:order_number>/", views.OrderDetail.as_view(), name="order-detail"
+    # ),
+    # path(
+    #     "orders/<str:order_number>/edit", views.OrderEdit.as_view(), name="order-edit"
+    # ),
 ]
 urlpatterns = format_suffix_patterns(urlpatterns)

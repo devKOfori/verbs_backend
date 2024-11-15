@@ -111,3 +111,27 @@ class ResetPasswordTests(APITestCase):
         url = reverse("reset-password-token", kwargs={"token": reset_password.token})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
+
+
+class OrderTests(APITestCase):
+    def setUp(self) -> None:
+        pass
+
+    def test_create_order(self):
+        url = reverse("create-order")
+        data = {
+            "items": [{"id": "bb6ccdd4-3218-4794-a16a-9327cdfec56f", "qty":1}],
+            "order_date": "2024-11-15",
+            "promo_code": {
+                "code": ""
+            },
+            "shipping_info": {
+                "shipping_address": "pursitie 7 F"
+            },
+            "first_name": "Ebenezer",
+            "last_name": "Ofori-Mensah",
+            "email": "oforimensahebenezer07@gmail.com"
+        }
+        response = self.client.post(url, data, format="json")
+        print(response.data)
+        self.assertEqual(response.status_code, 201)

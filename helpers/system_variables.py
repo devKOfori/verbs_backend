@@ -12,3 +12,7 @@ PROMO_CODE_STATUS_CHOICES = {
     ("invalid", "Invalid"),
     ("valid", "Valid")
 }
+
+TAXES = {
+    "VAT": 0,
+}

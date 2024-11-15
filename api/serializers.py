@@ -1,4 +1,5 @@
 import datetime
+import pytz
 from django.core.mail import EmailMessage
 from django.db import transaction, IntegrityError
 from django.contrib.auth.password_validation import validate_password
@@ -26,17 +27,20 @@ from .models import (
     ShippingInfo,
 )
 import uuid
-from helpers.system_variables import TAX_PERCENTAGE, UNREGISTERED_USER_EMAIL
+from helpers.system_variables import TAX_PERCENTAGE, UNREGISTERED_USER_EMAIL, TAXES
 from helpers.generators import (
-    generate_tax,
+    generate_order_taxes,
     generate_reset_password_token,
     generate_shipping_cost,
+    generate_order_number,
 )
 from helpers.defaults import (
     product_type_default,
     product_grade_default,
     product_color_default,
     default_payment_status,
+    get_default_order_status,
+    get_walk_in_colleague,
 )
 
 
@@ -482,6 +486,7 @@ class OrderListSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class PromoCodeSerializer(serializers.ModelSerializer):
+    code = serializers.CharField(allow_blank=True)
     class Meta:
         model = PromoCode
         fields = ["code", "value", "value_percentage"]
@@ -515,7 +520,7 @@ class PaymentInfoSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    promo_code = PromoCodeSerializer()
+    # promo_code = PromoCodeSerializer(required=False)
     items = OrderItemSerializer(many=True)
     status = OrderStatusSerializer(read_only=True)
     payment_status = serializers.StringRelatedField(read_only=True)
@@ -537,6 +542,9 @@ class OrderSerializer(serializers.ModelSerializer):
             "total_order_cost",
             "payment_status",
             "shipping_info",
+            "first_name",
+            "last_name",
+            "email",
         ]
         read_only_fields = [
             "id",
@@ -548,6 +556,14 @@ class OrderSerializer(serializers.ModelSerializer):
             "total_order_cost",
             "payment_status",
         ]
+
+    def validate_promo_code(self, value):
+        # print(value)
+        # # Allow None or empty dictionaries for promo_code
+        # if value is None or value.get("code", "") == "":
+        #     return None  # Replace empty promo_code with None
+        # return value
+        raise serializers.ValidationError("invalide promo code")
 
     def validate(self, data: dict):
         """
@@ -570,7 +586,9 @@ class OrderSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data: dict) -> dict:
-        promo_code_data = validated_data.pop("promo_code", "")
+        # print(validated_data)
+        promo_code_data = validated_data.pop("promo_code", {})
+        print(f"Promo code: {validated_data.get("promo_code")}")
         order_items_data = validated_data.pop("items", [])
         shipping_info_data = validated_data.pop("shipping_info", {})
 
@@ -581,14 +599,22 @@ class OrderSerializer(serializers.ModelSerializer):
         try:
             with transaction.atomic():
                 # create order object
-                code = promo_code_data.get("code")
-                promo_code = PromoCode.objects.get(code=code) if code else None
+                # try:
+                #     code = promo_code_data.get("code")
+                #     promo_code = PromoCode.objects.get(code=code) if promo_code_data else None
+                # except PromoCode.DoesNotExist:
+                #     raise serializers.ValidationError(
+                #         "Invalid promo code", code=status.HTTP_400_BAD_REQUEST
+                #     )
+                # except KeyError:
+                #     raise serializers.ValidationError("No promo code has been included")
+
                 # get default payment status
                 payment_status = default_payment_status()
                 shipping_cost = generate_shipping_cost()
                 total_items_count = len(order_items_data)
                 order = Order.objects.create(
-                    promo_code=promo_code,
+                    promo_code=None,
                     payment_status=payment_status,
                     shipping_cost=shipping_cost,
                     total_items_count=total_items_count,
@@ -618,13 +644,14 @@ class OrderSerializer(serializers.ModelSerializer):
                             qty=qty,
                             tax=item_tax,
                             discount=item_discount,
-                            promo_code=promo_code,
+                            # promo_code=promo_code,
                             product_cost=product_cost,
                             total_cost=total_cost,
                         )
                 order.total_items_cost = total_items_cost
                 order_tax = generate_tax(total_items_cost)
-                total_order_cost = total_items_cost + order_tax - promo_code.value
+                # total_order_cost = total_items_cost + order_tax - promo_code.value
+                total_order_cost = total_items_cost + order_tax
                 order.total_order_cost = total_order_cost
                 order.save()
             return order
@@ -633,54 +660,150 @@ class OrderSerializer(serializers.ModelSerializer):
                 f"Failed to create order {e}", code=status.HTTP_400_BAD_REQUEST
             )
 
-    def update(self, instance, validated_data):
-        promo_code_data = validated_data.pop("promo_code", "")
-        order_items_data = validated_data.pop("items", [])
-        shipping_info_data = validated_data.pop("shipping_info", {})
 
-        if not order_items_data:
+class OrderSerializer(serializers.ModelSerializer):
+    promo_code = PromoCodeSerializer()
+    items = OrderItemSerializer(many=True)
+    status = OrderStatusSerializer(read_only=True)
+    payment_status = serializers.StringRelatedField(read_only=True)
+    shipping_info = ShippingInfoSerializer()
+
+    class Meta:
+        model = Order
+
+    class Meta:
+        model = Order
+        fields = [
+            "id",
+            "order_number",
+            "items",
+            "order_date",
+            "status",
+            "tax",
+            "promo_code",
+            "total_items_count",
+            "shipping_cost",
+            "total_items_cost",
+            "total_order_cost",
+            "payment_status",
+            "shipping_info",
+            "first_name",
+            "last_name",
+            "email",
+        ]
+        read_only_fields = [
+            "id",
+            "order_number",
+            "tax",
+            "total_items_count",
+            "total_items_cost",
+            "shipping_cost",
+            "total_order_cost",
+            "payment_status",
+        ]
+
+    def validate(self, data: dict):
+        promo_code_data: dict = data.get("promo_code", None)
+        if promo_code_data and promo_code_data.get("code"):
+            return data
+        else:
+            data.pop("promo_code", None)
+            return data
+
+    def create(self, validated_data: dict):
+        print(validated_data)
+        shipping_cost = generate_shipping_cost()
+        products_data = validated_data.pop("items", [])
+        promo_code_data = validated_data.pop("promo_code", None)
+        shipping_info_data = validated_data.pop("shipping_info", {})
+        order_number = generate_order_number()
+        first_name = validated_data.get("first_name", "")
+        last_name = validated_data.get("last_name", "")
+        email = validated_data.get("email", "")
+        walk_in_colleague = get_walk_in_colleague()
+        if not products_data:
             raise serializers.ValidationError(
                 "No items have been selected", code=status.HTTP_400_BAD_REQUEST
             )
-        try:
-            with transaction.atomic():
-                # create order object
-                order = Order.objects.create(promo_code=promo_code, **validated_data)
-                # create related shipping information
-                ShippingInfo.objects.create(
-                    order=order, shipping_country=None, **shipping_info_data
-                )
-                # creating associated order items
-                order_items = []
-                for order_item_data in order_items_data:
-                    item_id = order_item_data.pop("product", "")
-                    if item_id:
-                        product = Product.objects.get(id=item_id)
-                        item_discount = product.discount
-                        qty = order_item_data.get("qty")
-                        product_cost = qty * product.unit_price
-                        item_tax = generate_tax(product_cost)
-                        # get applied promo code details
-                        promo_code = PromoCode.objects.get(code=promo_code_data)
-                        promo_code_value = promo_code.value
-                        total_cost = (
-                            product_cost + item_tax - promo_code_value - item_discount
-                        )
-                        OrderItems.objects.create(
-                            order=order,
-                            product=product,
-                            qty=qty,
-                            tax=item_tax,
-                            discount=item_discount,
-                            promo_code=promo_code,
-                            product_cost=product_cost,
-                            total_cost=total_cost,
-                        )
-            return order
-        except Exception as e:
+        products: list = []
+        ordered_products: list = []
+        # ordered_products_cost: list = []
+        for product_data in products_data:
+            product_id, qty = product_data["id"], product_data["qty"]
+            product = Product.objects.get(id=product_id)
+            products.append(product)
+            # ordered_products_cost.append(qty * product.unit_price)
+            ordered_product = OrderItems(product=product, qty=qty)
+            ordered_products.append(ordered_product)
+        products_cost = sum(
+            [
+                ordered_product.calculate_ordered_product_price
+                for ordered_product in ordered_products
+            ]
+        )
+        taxes = generate_order_taxes(products_cost, TAXES)
+        order_tax = sum(taxes.values())
+        discount = 0.00
+        promo_code = promo_code_data["code"] if promo_code_data else None
+        total_items_count = len(products_data)
+        added_by = self.context["request"].user if "request" in self.context else None
+        print(f"self.context = {self.context["request"].user}")
+        user_is_anonymous = added_by.is_anonymous
+        if not all(
+            [
+                added_by,
+                user_is_anonymous,
+                validated_data.get("first_name"),
+                validated_data.get("last_name"),
+                validated_data.get("email"),
+            ]
+        ):
             raise serializers.ValidationError(
-                f"Failed to create order {e}", code=status.HTTP_400_BAD_REQUEST
+                "Sign in or fill in the necessary personal information"
             )
+        if added_by and not user_is_anonymous:
+            walk_in_colleague = added_by
+            if not all([first_name, last_name, email]):
+                first_name = added_by.first_name
+                last_name = added_by.last_name
+                email = added_by.email
+        if not added_by or user_is_anonymous:
+            added_by = get_walk_in_colleague()
+        order_status = get_default_order_status()
+        total_items_cost = (((100 - discount) / 100) * float(products_cost)) + order_tax
+        payment_status = default_payment_status()
+        shipping_cost = 0.00
+        with transaction.atomic():
+            order = Order.objects.create(
+                order_number=order_number,
+                order_date=validated_data.get(
+                    "order_date", datetime.datetime.now(pytz.utc)
+                ),
+                added_by=walk_in_colleague,
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+                phone_number=validated_data.get("phone_number", ""),
+                status=order_status,
+                tax=order_tax,
+                discount=discount,
+                promo_code=promo_code,
+                total_items_count=total_items_count,
+                total_items_cost=total_items_cost,
+                payment_status=payment_status,
+                shipping_cost=shipping_cost,
+            )
+            for ordered_product in ordered_products:
+                ordered_product.order = order
+                ordered_product.tax = 0
+                ordered_product.discount = ordered_product.product.discount
+                ordered_product.promo_code = None
+                ordered_product.product_order_cost = (
+                    ordered_product.product.unit_price * qty
+                )
+                ordered_product.total_cost = 0
+                ordered_product.save()
+        return order
 
 
 class OrderEditSerializer(serializers.ModelSerializer):

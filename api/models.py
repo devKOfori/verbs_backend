@@ -11,7 +11,7 @@ from helpers.defaults import (
     PRODUCT_QTY_DEFAULT,
     ORDER_DISCOUNT_DEFAULT,
     RESET_PASSWORD_STATUS_DEFAULT,
-    order_status_default,
+    get_default_order_status,
     order_payment_status_default,
     product_frame_type_default,
     product_color_default,
@@ -301,13 +301,15 @@ class Order(models.Model):
     email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=255, blank=True, null=True)
     status = models.ForeignKey(
-        "OrderStatus", on_delete=models.SET_DEFAULT, default=order_status_default
+        "OrderStatus", on_delete=models.SET_DEFAULT, default=get_default_order_status
     )
     tax = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
     discount = models.DecimalField(
         max_digits=3, decimal_places=1, default=ORDER_DISCOUNT_DEFAULT
     )
-    promo_code = models.ForeignKey(PromoCode, on_delete=models.SET_NULL, null=True)
+    promo_code = models.ForeignKey(
+        PromoCode, on_delete=models.SET_NULL, null=True, blank=True
+    )
     total_items_count = models.PositiveIntegerField(default=0)
     total_items_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
     shipping_cost = models.DecimalField(max_digits=6, decimal_places=2)
@@ -337,18 +339,26 @@ class OrderItems(models.Model):
     tax = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
     discount = models.DecimalField(max_digits=3, decimal_places=1, default=0)
     promo_code = models.ForeignKey(PromoCode, on_delete=models.SET_NULL, null=True)
-    product_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    product_order_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
     total_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 
     def __str__(self) -> str:
-        return self.product
+        return self.product.name
+    
+    @property
+    def calculate_ordered_product_price(self):
+        """
+        this method returns the cost of a single ordered item
+        """
+        ordered_product_price = ((100 - (self.product.discount))/100) * self.product.unit_price
+        return ordered_product_price
 
     def get_total_cost(self):
         """
         this method returns the final cost of an ordered product
         """
         return
-    
+
     class Meta:
         db_table = "orderitem"
         verbose_name = "Order Item"
