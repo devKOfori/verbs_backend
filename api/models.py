@@ -350,7 +350,7 @@ class OrderItems(models.Model):
         """
         this method returns the cost of a single ordered item
         """
-        ordered_product_price = ((100 - (self.product.discount))/100) * self.product.unit_price
+        ordered_product_price = (((100 - (self.product.discount))/100) * self.product.unit_price) * self.qty
         return ordered_product_price
 
     def get_total_cost(self):

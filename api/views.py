@@ -6,9 +6,9 @@ from .serializers import (
     ProductListSerializer,
     ProductSerializer,
     OrderSerializer,
-    # OrderDetailSerializer,
+    OrderDetailSerializer,
     OrderListSerializer,
-    # OrderEditSerializer,
+    OrderEditSerializer,
     ResetPasswordSerializer,
     SetNewPasswordSerializer,
 )
@@ -143,11 +143,11 @@ class OrderCreate(generics.CreateAPIView):
     queryset = Order.objects.all()
 
 
-# class OrderDetail(generics.RetrieveDestroyAPIView):
-#     serializer_class = OrderDetailSerializer
-#     queryset = Order.objects.all()
-#     lookup_field = "order_number"
-#     lookup_url_kwarg = "order_number"
+class OrderDetail(generics.RetrieveDestroyAPIView):
+    serializer_class = OrderSerializer
+    queryset = Order.objects.all()
+    lookup_field = "order_number"
+    lookup_url_kwarg = "order_number"
 
 
 # class OrderEdit(generics.UpdateAPIView):

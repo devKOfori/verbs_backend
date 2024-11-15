@@ -12,7 +12,7 @@ def generate_order_taxes(
 ) -> float:
     taxes = {}
     for tax, percentage in tax_percentage.items():
-        taxes[tax] = (1 + (percentage / 100)) * float(items_cost)
+        taxes[tax] = (percentage / 100) * float(items_cost)
     return taxes
 
 

@@ -487,6 +487,7 @@ class OrderListSerializer(serializers.HyperlinkedModelSerializer):
 
 class PromoCodeSerializer(serializers.ModelSerializer):
     code = serializers.CharField(allow_blank=True)
+
     class Meta:
         model = PromoCode
         fields = ["code", "value", "value_percentage"]
@@ -727,12 +728,13 @@ class OrderSerializer(serializers.ModelSerializer):
             )
         products: list = []
         ordered_products: list = []
+        total_items_count = 0
         # ordered_products_cost: list = []
         for product_data in products_data:
             product_id, qty = product_data["id"], product_data["qty"]
             product = Product.objects.get(id=product_id)
             products.append(product)
-            # ordered_products_cost.append(qty * product.unit_price)
+            total_items_count += qty
             ordered_product = OrderItems(product=product, qty=qty)
             ordered_products.append(ordered_product)
         products_cost = sum(
@@ -742,10 +744,10 @@ class OrderSerializer(serializers.ModelSerializer):
             ]
         )
         taxes = generate_order_taxes(products_cost, TAXES)
+        print(taxes)
         order_tax = sum(taxes.values())
         discount = 0.00
         promo_code = promo_code_data["code"] if promo_code_data else None
-        total_items_count = len(products_data)
         added_by = self.context["request"].user if "request" in self.context else None
         print(f"self.context = {self.context["request"].user}")
         user_is_anonymous = added_by.is_anonymous
@@ -773,6 +775,7 @@ class OrderSerializer(serializers.ModelSerializer):
         total_items_cost = (((100 - discount) / 100) * float(products_cost)) + order_tax
         payment_status = default_payment_status()
         shipping_cost = 0.00
+        total_order_cost = sum([total_items_cost, order_tax])
         with transaction.atomic():
             order = Order.objects.create(
                 order_number=order_number,
@@ -792,6 +795,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 total_items_cost=total_items_cost,
                 payment_status=payment_status,
                 shipping_cost=shipping_cost,
+                total_order_cost=total_order_cost,
             )
             for ordered_product in ordered_products:
                 ordered_product.order = order
