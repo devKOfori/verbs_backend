@@ -372,7 +372,7 @@ class OrderItems(models.Model):
 
 
 class OrderPaymentStatus(models.Model):
-    id = models.UUIDField(default=uuid.uuid4(), primary_key=True)
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=255, unique=True, db_index=True)
 
     def __str__(self) -> str:
@@ -385,7 +385,7 @@ class OrderPaymentStatus(models.Model):
 
 
 class OrderStatus(models.Model):
-    id = models.UUIDField(default=uuid.uuid4(), primary_key=True)
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=255, unique=True, db_index=True)
 
     def __str__(self) -> str:
@@ -402,7 +402,7 @@ class ShippingInfo(models.Model):
     order = models.OneToOneField(
         Order, on_delete=models.CASCADE, related_name="shipping_info"
     )
-    shipping_country = CountryField()
+    # shipping_country = CountryField()
     shipping_address = models.TextField(blank=True, null=True)
     shipping_cost = models.DecimalField(max_digits=4, decimal_places=2)
     delivery_period = models.CharField(max_length=255, blank=True, null=True)

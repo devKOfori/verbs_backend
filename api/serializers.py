@@ -684,7 +684,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "tax",
             "promo_code",
             "total_items_count",
-            "shipping_cost",
+            # "shipping_cost",
             "total_items_cost",
             "total_order_cost",
             "payment_status",
@@ -700,7 +700,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "tax",
             "total_items_count",
             "total_items_cost",
-            "shipping_cost",
+            # "shipping_cost",
             "total_order_cost",
             "payment_status",
             "added_by",
@@ -736,7 +736,7 @@ class OrderSerializer(serializers.ModelSerializer):
         for product_data in products_data:
             product_id, qty = product_data["id"], product_data["qty"]
             product = Product.objects.get(id=product_id)
-            products.append(product)
+            # products.append(product)
             total_items_count += qty
             ordered_product = OrderItems(product=product, qty=qty)
             ordered_products.append(ordered_product)
@@ -767,7 +767,6 @@ class OrderSerializer(serializers.ModelSerializer):
                 "Sign in or fill in the necessary personal information"
             )
         if added_by and not user_is_anonymous:
-            walk_in_colleague = added_by
             if not all([first_name, last_name, email]):
                 first_name = added_by.first_name
                 last_name = added_by.last_name
@@ -785,7 +784,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 order_date=validated_data.get(
                     "order_date", datetime.datetime.now(pytz.utc)
                 ),
-                added_by=walk_in_colleague,
+                added_by=added_by,
                 first_name=first_name,
                 last_name=last_name,
                 email=email,
@@ -810,6 +809,12 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
                 ordered_product.total_cost = 0
                 ordered_product.save()
+            ShippingInfo.objects.create(
+                order=order,
+                shipping_address=shipping_info_data.get("shipping_address", None),
+                shipping_cost=shipping_cost,
+                delivery_period = None
+            )
         return order
 
 
@@ -942,3 +947,4 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         order.tax = items_tax
         order.save()
         return order
+
