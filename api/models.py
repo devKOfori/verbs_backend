@@ -319,6 +319,9 @@ class Order(models.Model):
         on_delete=models.SET_DEFAULT,
         default=order_payment_status_default,
     )
+    accumulate_payment = models.BooleanField(
+        default=False
+    )  # this field specifies whether colleague wants to pay for item in small amounts. item is released when payment is complete
     created_at = models.DateTimeField(auto_now_add=True)
     modified_at = models.DateTimeField(auto_now=True)
 
@@ -339,20 +342,24 @@ class OrderItems(models.Model):
     tax = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
     discount = models.DecimalField(max_digits=3, decimal_places=1, default=0)
     promo_code = models.ForeignKey(PromoCode, on_delete=models.SET_NULL, null=True)
-    product_order_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    product_order_cost = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0.00
+    )
     total_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 
     def __str__(self) -> str:
         return self.product.name
-    
+
     @property
     def calculate_ordered_product_price(self):
         """
         this method returns the cost of a single ordered item
         """
-        ordered_product_price = (((100 - (self.product.discount))/100) * self.product.unit_price) * self.qty
+        ordered_product_price = (
+            ((100 - (self.product.discount)) / 100) * self.product.unit_price
+        ) * self.qty
         return ordered_product_price
-    
+
     @property
     def calculate_ordered_product_total_cost(self):
         if not self.promo_code:
@@ -426,7 +433,7 @@ class PaymentMethod(models.Model):
 
 class PaymentInfo(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="payments")
     payment_method = models.ForeignKey(
         PaymentMethod, on_delete=models.SET_NULL, null=True
     )

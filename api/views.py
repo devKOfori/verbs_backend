@@ -1,5 +1,5 @@
 import pytz
-from .models import Colleague, Product, ResetPassword, Order
+from .models import Colleague, Product, ResetPassword, Order, PaymentInfo
 from .serializers import (
     CreateColleagueSerializer,
     ColleagueSerializer,
@@ -9,6 +9,7 @@ from .serializers import (
     OrderDetailSerializer,
     OrderListSerializer,
     OrderEditSerializer,
+    OrderPaymentInfoSerializer,
     ResetPasswordSerializer,
     SetNewPasswordSerializer,
 )
@@ -126,6 +127,7 @@ class ProductList(generics.ListAPIView):
 class ProductCreate(generics.CreateAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
+    # permission_classes = [permissions.IsAuthenticated]
 
 
 class ProductDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -136,11 +138,13 @@ class ProductDetail(generics.RetrieveUpdateDestroyAPIView):
 class OrderList(generics.ListAPIView):
     serializer_class = OrderListSerializer
     queryset = Order.objects.all()
+    
 
 
 class OrderCreate(generics.CreateAPIView):
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
+    
 
 
 class OrderDetail(generics.RetrieveDestroyAPIView):
@@ -148,6 +152,12 @@ class OrderDetail(generics.RetrieveDestroyAPIView):
     queryset = Order.objects.all()
     lookup_field = "order_number"
     lookup_url_kwarg = "order_number"
+    
+
+class OrderPayment(generics.CreateAPIView):
+    serializer_class = OrderPaymentInfoSerializer
+    queryset = PaymentInfo.objects.all()
+    
 
 
 # class OrderEdit(generics.UpdateAPIView):
@@ -155,3 +165,4 @@ class OrderDetail(generics.RetrieveDestroyAPIView):
 #     queryset = Order.objects.all()
 #     lookup_field = "order_number"
 #     lookup_url_kwarg = "order_number"
+

@@ -2,6 +2,7 @@ import datetime
 import pytz
 from django.core.mail import EmailMessage
 from django.db import transaction, IntegrityError
+from django.db.models import Sum
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import exceptions
 from rest_framework import serializers
@@ -16,6 +17,7 @@ from .models import (
     Order,
     OrderItems,
     OrderStatus,
+    OrderPaymentStatus,
     ResetPassword,
     Color,
     ThoughtTheme,
@@ -662,6 +664,49 @@ class OrderSerializer(serializers.ModelSerializer):
             )
 
 
+class OrderPaymentInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentInfo
+        fields = [
+            "id",
+            "payment_method",
+            "transaction_id",
+            "payment_date",
+            "amount_paid",
+        ]
+        read_only_fields = ["id", "payment_date"]
+
+    def create(self, validated_data):
+        order_number = self.context["view"].kwargs.get("order_number")
+        if not order_number:
+            raise serializers.ValidationError("Order number is required.")
+
+        try:
+            order = Order.objects.get(order_number=order_number)
+        except Order.DoesNotExist:
+            raise serializers.ValidationError("Order does not exist.")
+
+        total_order_cost = order.total_order_cost
+        paid_amount = float(validated_data.get("amount_paid", 0))
+        current_payment = float(PaymentInfo.objects.filter(order__order_number=order_number).aggregate(total=Sum("amount_paid"))["total"])
+        total_paid = paid_amount + current_payment
+        print(f"total payments: {total_paid}, current_payment: {current_payment}")
+        if not order.accumulate_payment and (total_paid < total_order_cost):
+            raise serializers.ValidationError(
+                f"Total payments ({total_paid}) is not sufficient to pay item price ({total_order_cost})"
+            )
+        payment_info = PaymentInfo.objects.create(order=order, **validated_data)
+
+        if total_paid >= total_order_cost:
+            order.payment_status = OrderPaymentStatus.objects.get(name="Fully paid")
+        if total_paid < total_order_cost:
+            order.payment_status = OrderPaymentStatus.objects.get(name="Partially paid")
+        order.save()
+        # TODO: send email to confirm payment
+
+        return payment_info
+
+
 class OrderSerializer(serializers.ModelSerializer):
     promo_code = PromoCodeSerializer()
     items = OrderItemSerializer(many=True)
@@ -669,6 +714,7 @@ class OrderSerializer(serializers.ModelSerializer):
     payment_status = serializers.StringRelatedField(read_only=True)
     shipping_info = ShippingInfoSerializer()
     added_by = serializers.StringRelatedField()
+    payments = OrderPaymentInfoSerializer(many=True)
 
     class Meta:
         model = Order
@@ -693,6 +739,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "email",
+            "payments",
         ]
         read_only_fields = [
             "id",
@@ -704,6 +751,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "total_order_cost",
             "payment_status",
             "added_by",
+            "payments",
         ]
 
     def validate(self, data: dict):
@@ -724,12 +772,12 @@ class OrderSerializer(serializers.ModelSerializer):
         first_name = validated_data.get("first_name", "")
         last_name = validated_data.get("last_name", "")
         email = validated_data.get("email", "")
-        walk_in_colleague = get_walk_in_colleague()
+        # walk_in_colleague = get_walk_in_colleague()
         if not products_data:
             raise serializers.ValidationError(
                 "No items have been selected", code=status.HTTP_400_BAD_REQUEST
             )
-        products: list = []
+        # products: list = []
         ordered_products: list = []
         total_items_count = 0
         # ordered_products_cost: list = []
@@ -752,7 +800,6 @@ class OrderSerializer(serializers.ModelSerializer):
         discount = 0.00
         promo_code = promo_code_data["code"] if promo_code_data else None
         added_by = self.context["request"].user if "request" in self.context else None
-        print(f"self.context = {self.context["request"].user}")
         user_is_anonymous = added_by.is_anonymous
         if not all(
             [
@@ -813,7 +860,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 order=order,
                 shipping_address=shipping_info_data.get("shipping_address", None),
                 shipping_cost=shipping_cost,
-                delivery_period = None
+                delivery_period=None,
             )
         return order
 
@@ -947,4 +994,3 @@ class OrderDetailSerializer(serializers.ModelSerializer):
         order.tax = items_tax
         order.save()
         return order
-

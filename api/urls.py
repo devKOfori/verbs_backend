@@ -20,8 +20,9 @@ urlpatterns = [
     path(
         "orders/<str:order_number>/", views.OrderDetail.as_view(), name="order-detail"
     ),
+    path("orders/<str:order_number>/pay/", views.OrderPayment.as_view(), name="order-payment"),
     # path(
-    #     "orders/<str:order_number>/edit", views.OrderEdit.as_view(), name="order-edit"
+    #     "orders/<str:order_number>/edit/", views.OrderEdit.as_view(), name="order-edit"
     # ),
 ]
 urlpatterns = format_suffix_patterns(urlpatterns)
