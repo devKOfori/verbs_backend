@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django_countries.fields import CountryField
 from helpers.validators import validate_shipping_cost_percentage
@@ -201,6 +202,11 @@ class Product(models.Model):
     discount = models.DecimalField(max_digits=3, decimal_places=1, default=0.00)
 
     added_at = models.DateTimeField(auto_now_add=True)
+    added_by = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+    )
 
     def __str__(self) -> str:
         return self.name

@@ -304,8 +304,11 @@ class ProductSerializer(serializers.ModelSerializer):
                 )
 
         with transaction.atomic():
+            request = self.context.get("request")
+            user = request.user if request else None
             product = Product.objects.create(
                 product_type=product_type,
+                added_by = user,
                 grade=grade,
                 **validated_data,
             )
@@ -413,6 +416,8 @@ class ProductSerializer(serializers.ModelSerializer):
                     "Product grade does not exist", code=status.HTTP_400_BAD_REQUEST
                 )
         with transaction.atomic():
+            request = self.context.get("request")
+            user = request.user if request else None
             instance.name = validated_data.get("name", instance.name)
             instance.grade = grade or instance.grade
             instance.product_type = product_type or instance.product_type
@@ -487,6 +492,7 @@ class ProductSerializer(serializers.ModelSerializer):
                 ]
             )
             instance.description = validated_data.get("description", "")
+            instance.added_by = user
             instance.save()
             return instance
 
