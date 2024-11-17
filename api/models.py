@@ -348,7 +348,7 @@ class OrderItems(models.Model):
         this method returns the final cost of an ordered product
         """
         return
-    
+
     class Meta:
         db_table = "orderitem"
         verbose_name = "Order Item"

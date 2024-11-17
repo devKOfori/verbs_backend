@@ -121,28 +121,28 @@ class ProductTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductType
         fields = ["id", "name"]
-        read_only_fields = ["id"]
+        # read_only_fields = ["id"]
 
 
 class ProductGradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductGrade
         fields = ["id", "name"]
-        read_only_fields = ["id"]
+        # read_only_fields = ["id"]
 
 
 class ThoughtThemeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ThoughtTheme
         fields = ["id", "name"]
-        read_only_fields = ["id"]
+        # read_only_fields = ["id"]
 
 
 class FrameTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = FrameType
         fields = ["id", "name"]
-        read_only_fields = ["id"]
+        # read_only_fields = ["id"]
 
 
 class ProductReviewSerializer(serializers.ModelSerializer):
@@ -269,7 +269,7 @@ class ProductSerializer(serializers.ModelSerializer):
         self.default_color, _ = Color.objects.get_or_create(
             name="Default Color", defaults={"code": "default"}
         )
-        self.default_frame_type, _ = frame_type = FrameType.objects.get_or_create(
+        self.default_frame_type, _ = FrameType.objects.get_or_create(
             name="Default Type"
         )
 
@@ -285,17 +285,23 @@ class ProductSerializer(serializers.ModelSerializer):
         if not product_type_data:
             product_type = self.default_type
         else:
-            if "name" in product_type_data:
-                product_type, _ = ProductType.objects.get_or_create(
-                    name=product_type_data["name"]
+            try:
+                product_type = ProductType.objects.get(id=product_type_data.get("id"))
+            except ProductType.DoesNotExist:
+                raise serializers.ValidationError(
+                    "Product type does not exist", code=status.HTTP_400_BAD_REQUEST
                 )
 
         grade = None
         if not grade_data:
             grade = self.default_grade
         else:
-            if "name" in grade_data:
-                grade, _ = ProductGrade.objects.get_or_create(name=grade_data["name"])
+            try:
+                grade = ProductGrade.objects.get(id=grade_data.get("id"))
+            except ProductGrade.DoesNotExist:
+                raise serializers.ValidationError(
+                    "Product grade does not exist", code=status.HTTP_400_BAD_REQUEST
+                )
 
         with transaction.atomic():
             product = Product.objects.create(
@@ -308,29 +314,43 @@ class ProductSerializer(serializers.ModelSerializer):
             if not themes_data:
                 thought_themes.append(self.default_theme)
             else:
-                thought_themes = [
-                    ThoughtTheme.objects.get_or_create(name=theme_data["name"])[0]
-                    for theme_data in themes_data
-                    if "name" in theme_data
-                ]
+                try:
+                    thought_themes = [
+                        ThoughtTheme.objects.get(id=theme_data.get("id"))
+                        for theme_data in themes_data
+                    ]
+                except ThoughtTheme.DoesNotExist:
+                    raise serializers.ValidationError(
+                        "A theme key does not exist", code=status.HTTP_400_BAD_REQUEST
+                    )
 
             product.themes.set(thought_themes)
 
             if sizes_data:
-                sizes = [
-                    Dimension.objects.get_or_create(
-                        width=size_data["width"], height=size_data["height"]
-                    )[0]
-                    for size_data in sizes_data
-                ]
-                product.sizes.set(sizes)
+                try:
+                    sizes = [
+                        Dimension.objects.get(id=size_data.get("id"))
+                        for size_data in sizes_data
+                    ]
+                    product.sizes.set(sizes)
+                except Dimension.DoesNotExist:
+                    raise serializers.ValidationError(
+                        "A selected dimension does not exist",
+                        code=status.HTTP_400_BAD_REQUEST,
+                    )
 
             colors = []
             if colors_data:
-                colors = [
-                    Color.objects.get_or_create(**color_data)[0]
-                    for color_data in colors_data
-                ]
+                try:
+                    colors = [
+                        Color.objects.get(id=color_data.get("id"))
+                        for color_data in colors_data
+                    ]
+                except Color.DoesNotExist:
+                    raise serializers.ValidationError(
+                        "A selected color does not exist",
+                        code=status.HTTP_400_BAD_REQUEST,
+                    )
             else:
                 colors.append(self.default_color)
 
@@ -338,10 +358,16 @@ class ProductSerializer(serializers.ModelSerializer):
 
             frame_types = []
             if frame_types_data:
-                frame_types = [
-                    FrameType.objects.get_or_create(**frame_type_data)[0]
-                    for frame_type_data in frame_types_data
-                ]
+                try:
+                    frame_types = [
+                        FrameType.objects.get(id=frame_type_data.get("id"))
+                        for frame_type_data in frame_types_data
+                    ]
+                except FrameType.DoesNotExist:
+                    raise serializers.ValidationError(
+                        "A selected frame type does not exist",
+                        code=status.HTTP_400_BAD_REQUEST,
+                    )
             else:
                 frame_types.append(self.default_frame_type)
             product.frame_types.set(frame_types)
@@ -369,49 +395,70 @@ class ProductSerializer(serializers.ModelSerializer):
         if not product_type_data:
             product_type = self.default_type
         else:
-            if "name" in product_type_data:
-                product_type, _ = ProductType.objects.get_or_create(
-                    name=product_type_data["name"]
+            try:
+                product_type = ProductType.objects.get(id=product_type_data.get("id"))
+            except ProductType.DoesNotExist:
+                raise serializers.ValidationError(
+                    "Product type does not exist", code=status.HTTP_400_BAD_REQUEST
                 )
 
         grade = None
         if not grade_data:
             grade = self.default_grade
         else:
-            if "name" in grade_data:
-                grade, _ = ProductGrade.objects.get_or_create(name=grade_data["name"])
-
+            try:
+                grade = ProductGrade.objects.get(id=grade_data.get("id"))
+            except ProductGrade.DoesNotExist:
+                raise serializers.ValidationError(
+                    "Product grade does not exist", code=status.HTTP_400_BAD_REQUEST
+                )
         with transaction.atomic():
-            instance.name = validated_data.get("name")
-            instance.grade = grade
+            instance.name = validated_data.get("name", instance.name)
+            instance.grade = grade or instance.grade
+            instance.product_type = product_type or instance.product_type
 
             thought_themes = []
             if not themes_data:
                 thought_themes.append(self.default_theme)
             else:
-                thought_themes = [
-                    ThoughtTheme.objects.get_or_create(name=theme_data["name"])[0]
-                    for theme_data in themes_data
-                    if "name" in theme_data
-                ]
+                try:
+                    thought_themes = [
+                        ThoughtTheme.objects.get(id=theme_data.get("id"))
+                        for theme_data in themes_data
+                    ]
+                except ThoughtTheme.DoesNotExist:
+                    raise serializers.ValidationError(
+                        "A theme key does not exist", code=status.HTTP_400_BAD_REQUEST
+                    )
 
             instance.themes.set(thought_themes)
 
+            sizes = []
             if sizes_data:
-                sizes = [
-                    Dimension.objects.get_or_create(
-                        width=size_data["width"], height=size_data["height"]
-                    )[0]
-                    for size_data in sizes_data
-                ]
-                instance.sizes.set(sizes)
+                try:
+                    sizes = [
+                        Dimension.objects.get(id=size_data.get("id"))
+                        for size_data in sizes_data
+                    ]
+                except Dimension.DoesNotExist:
+                    raise serializers.ValidationError(
+                        "A selected dimension does not exist",
+                        code=status.HTTP_400_BAD_REQUEST,
+                    )
+            instance.sizes.set(sizes)
 
             colors = []
             if colors_data:
-                colors = [
-                    Color.objects.get_or_create(**color_data)[0]
-                    for color_data in colors_data
-                ]
+                try:
+                    colors = [
+                        Color.objects.get(id=color_data.get("id"))
+                        for color_data in colors_data
+                    ]
+                except Color.DoesNotExist:
+                    raise serializers.ValidationError(
+                        "A selected color does not exist",
+                        code=status.HTTP_400_BAD_REQUEST,
+                    )
             else:
                 colors.append(self.default_color)
 
@@ -419,10 +466,16 @@ class ProductSerializer(serializers.ModelSerializer):
 
             frame_types = []
             if frame_types_data:
-                frame_types = [
-                    FrameType.objects.get_or_create(**frame_type_data)[0]
-                    for frame_type_data in frame_types_data
-                ]
+                try:
+                    frame_types = [
+                        FrameType.objects.get(id=frame_type_data.get("id"))
+                        for frame_type_data in frame_types_data
+                    ]
+                except FrameType.DoesNotExist:
+                    raise serializers.ValidationError(
+                        "A selected frame type does not exist",
+                        code=status.HTTP_400_BAD_REQUEST,
+                    )
             else:
                 frame_types.append(self.default_frame_type)
             instance.frame_types.set(frame_types)
