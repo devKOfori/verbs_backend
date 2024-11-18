@@ -1,4 +1,6 @@
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from .models import Colleague, ResetPassword
 from oauth2_provider.models import Application
@@ -118,10 +120,18 @@ class ResetPasswordTests(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
 
+
 class ProductTests(APITestCase):
     def setUp(self):
-        # Mock token setup
-        self.token = os.getenv("TOKEN", "")
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            email="testuser@verbs.com", password="password123" #, is_active=True
+        )
+        refresh = RefreshToken.for_user(self.user)
+        self.token = {
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+        }
         self.headers = {
             "Authorization": f"Bearer {self.token['access']}",
             "Content-Type": "application/json",
@@ -164,7 +174,8 @@ class ProductTests(APITestCase):
             "return_policy": "",
         }
 
-        response = self.client.post(url, data=payload, format='json', **self.headers)
+        response = self.client.post(url, data=payload, format="json", **self.headers)
+        print(response.json)
         self.assertEqual(response.status_code, 201)
-        self.assertIn('id', response.data)
-        self.assertEqual(response.data['name'], product_name)
+        self.assertIn("id", response.data)
+        self.assertEqual(response.data["name"], product_name)
