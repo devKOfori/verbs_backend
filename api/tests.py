@@ -3,6 +3,12 @@ from django.urls import reverse
 from .models import Colleague, ResetPassword
 from oauth2_provider.models import Application
 from datetime import datetime, timedelta
+import uuid
+import requests
+from dotenv import load_dotenv
+import os
+
+load_dotenv("../.env")
 
 
 class ColleagueRegistrationAPITests(APITestCase):
@@ -111,3 +117,54 @@ class ResetPasswordTests(APITestCase):
         url = reverse("reset-password-token", kwargs={"token": reset_password.token})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 400)
+
+class ProductTests(APITestCase):
+    def setUp(self):
+        # Mock token setup
+        self.token = os.getenv("TOKEN", "")
+        self.headers = {
+            "Authorization": f"Bearer {self.token['access']}",
+            "Content-Type": "application/json",
+        }
+
+    def test_create_product_with_login_user(self):
+        url = reverse("create-product")
+        id = str(uuid.uuid4())
+        product_name = f"Product - {id}"
+        payload = {
+            "id": id,
+            "name": product_name,
+            "product_type": {
+                "id": "49545acb-1121-4719-8abb-ea83cb66df22",
+                "name": "frame",
+            },
+            "grade": {
+                "id": "45d39f49-8d15-4276-8c75-fcaf5117dbf1",
+                "name": "essential",
+            },
+            "themes": [
+                {"id": "37e69a08-bfba-4ef9-93ec-9844e683b643", "name": "purpose"}
+            ],
+            "sizes": [
+                {
+                    "id": "244890fe-8078-42fd-b0da-ede02814549f",
+                    "width": "10.00",
+                    "height": "10.00",
+                }
+            ],
+            "weight": "10.00",
+            "colors": [{"id": "1ab181d8-2d58-4f20-9b07-84fc4958d35e", "name": "brown"}],
+            "frame_types": [
+                {"id": "79273154-b151-4cd7-8936-ce5913a4bd2d", "name": "wood"}
+            ],
+            "unit_price": "3000.00",
+            "qty": 5,
+            "description": product_name,
+            "images": [],
+            "return_policy": "",
+        }
+
+        response = self.client.post(url, data=payload, format='json', **self.headers)
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('id', response.data)
+        self.assertEqual(response.data['name'], product_name)
