@@ -123,26 +123,45 @@ class ProductTypeSerializer(serializers.ModelSerializer):
         fields = ["id", "name"]
         # read_only_fields = ["id"]
 
+    def to_internal_value(self, data):
+        """
+        Ensure that the `id` refers to an existing `ProductType`.
+        """
+        if isinstance(data, dict) and "id" in data:
+            try:
+                # Retrieve the existing ProductType instance by ID
+                return ProductType.objects.get(id=data["id"])
+            except ProductType.DoesNotExist:
+                raise serializers.ValidationError(
+                    {"id": "Invalid product type id. This product type does not exist."}
+                )
+        raise serializers.ValidationError({"id": "This field is required."})
+
+    def to_representation(self, instance):
+        """
+        Customize the output representation for the frontend.
+        """
+        return {"id": instance.id, "name": instance.name}
 
 class ProductGradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductGrade
         fields = ["id", "name"]
-        # read_only_fields = ["id"]
+        read_only_fields = ["id"]
 
 
 class ThoughtThemeSerializer(serializers.ModelSerializer):
     class Meta:
         model = ThoughtTheme
         fields = ["id", "name"]
-        # read_only_fields = ["id"]
+        read_only_fields = ["id"]
 
 
 class FrameTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = FrameType
         fields = ["id", "name"]
-        # read_only_fields = ["id"]
+        read_only_fields = ["id"]
 
 
 class ProductReviewSerializer(serializers.ModelSerializer):
@@ -324,7 +343,7 @@ class ProductSerializer(serializers.ModelSerializer):
                     ]
                 except ThoughtTheme.DoesNotExist:
                     raise serializers.ValidationError(
-                        "A theme key does not exist", code=status.HTTP_400_BAD_REQUEST
+                        "A selected theme does not exist", code=status.HTTP_400_BAD_REQUEST
                     )
 
             product.themes.set(thought_themes)
