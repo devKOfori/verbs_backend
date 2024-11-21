@@ -407,15 +407,11 @@ class ProductSerializer(serializers.ModelSerializer):
                 **validated_data,
             )
 
-
             product.themes.set(thought_themes)
-
 
             product.sizes.set(sizes)
 
-
             product.colors.set(colors)
-
 
             product.frame_types.set(frame_types)
 
@@ -426,8 +422,6 @@ class ProductSerializer(serializers.ModelSerializer):
                     for image_data in images_data
                 ]
             )
-
-            return product
 
     def update(self, instance, validated_data):
         product_type_data = validated_data.pop("product_type", {})
