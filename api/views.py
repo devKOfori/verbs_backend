@@ -127,7 +127,7 @@ class ProductList(generics.ListAPIView):
 class ProductCreate(generics.CreateAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class ProductDetail(generics.RetrieveUpdateDestroyAPIView):
