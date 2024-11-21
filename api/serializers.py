@@ -162,7 +162,7 @@ class ProductGradeSerializer(serializers.ModelSerializer):
                     }
                 )
         raise serializers.ValidationError({"id": "This field is required."})
-    
+
     def to_representation(self, instance):
         """
         Customize the output representation for the frontend.
@@ -188,7 +188,7 @@ class ThoughtThemeSerializer(serializers.ModelSerializer):
                     }
                 )
         raise serializers.ValidationError({"id": "This field is required."})
-    
+
     def to_representation(self, instance):
         """
         Customize the output representation for the frontend.
@@ -209,12 +209,10 @@ class FrameTypeSerializer(serializers.ModelSerializer):
                 return frame_type
             except FrameType.DoesNotExist:
                 raise serializers.ValidationError(
-                    {
-                        "id": "Invalid frame type id. This frame type does not exist."
-                    }
+                    {"id": "Invalid frame type id. This frame type does not exist."}
                 )
         raise serializers.ValidationError({"id": "This field is required."})
-    
+
     def to_representation(self, instance):
         """
         Customize the output representation for the frontend.
@@ -241,7 +239,7 @@ class ColorSerializer(serializers.ModelSerializer):
         model = Color
         fields = ["id", "name"]
         # read_only_fields = ["id"]
-    
+
     def to_internal_value(self, data):
         if isinstance(data, dict) and "id" in data:
             try:
@@ -249,12 +247,10 @@ class ColorSerializer(serializers.ModelSerializer):
                 return color
             except Color.DoesNotExist:
                 raise serializers.ValidationError(
-                    {
-                        "id": "Invalid color id. This color does not exist."
-                    }
+                    {"id": "Invalid color id. This color does not exist."}
                 )
         raise serializers.ValidationError({"id": "This field is required."})
-    
+
     def to_representation(self, instance):
         """
         Customize the output representation for the frontend.
@@ -275,12 +271,10 @@ class DimensionSerializer(serializers.ModelSerializer):
                 return dimension
             except Dimension.DoesNotExist:
                 raise serializers.ValidationError(
-                    {
-                        "id": "Invalid dimension id. This dimension does not exist."
-                    }
+                    {"id": "Invalid dimension id. This dimension does not exist."}
                 )
         raise serializers.ValidationError({"id": "This field is required."})
-    
+
     def to_representation(self, instance):
         """
         Customize the output representation for the frontend.
@@ -396,7 +390,7 @@ class ProductSerializer(serializers.ModelSerializer):
         sizes = validated_data.pop("sizes", [])
         colors = validated_data.pop("colors", [])
         frame_types = validated_data.pop("frame_types", [])
-       
+
         with transaction.atomic():
             request = self.context.get("request")
             user = request.user if request else None
@@ -579,10 +573,20 @@ class OrderListSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class PromoCodeSerializer(serializers.ModelSerializer):
+    code = serializers.CharField(blank=True)
+
     class Meta:
         model = PromoCode
         fields = ["code", "value", "value_percentage"]
         read_only_fields = ["value", "value_percentage"]
+
+    def validate(self, data: dict):
+        promo_code_data: dict = data.get("promo_code", None)
+        if promo_code_data and promo_code_data.get("code"):
+            return data
+        else:
+            data.pop("promo_code", None)
+            return data
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
