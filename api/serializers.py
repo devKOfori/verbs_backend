@@ -283,6 +283,14 @@ class ProductSerializer(serializers.ModelSerializer):
         grade_data = validated_data.pop("grade", {})
         themes_data = validated_data.pop("themes", [])
         images_data = validated_data.pop("images", [])
+
+        product_type = validated_data.pop("product_type", None)
+        grade = validated_data.pop("grade", None)
+        thought_themes = validated_data.pop("themes", [])
+        sizes = validated_data.pop("sizes", [])
+        colors = validated_data.pop("colors", [])
+        frame_types = validated_data.pop("frame_types", [])
+       
         sizes_data = validated_data.pop("sizes", [])
         colors_data = validated_data.pop("colors", [])
         frame_types_data = validated_data.pop("frame_types", [])
