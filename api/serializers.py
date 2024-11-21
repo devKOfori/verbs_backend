@@ -28,7 +28,7 @@ from .models import (
 import uuid
 from helpers.system_variables import TAX_PERCENTAGE, UNREGISTERED_USER_EMAIL
 from helpers.generators import (
-    generate_tax,
+    generate_order_taxes,
     generate_reset_password_token,
     generate_shipping_cost,
 )
@@ -707,7 +707,7 @@ class OrderSerializer(serializers.ModelSerializer):
                         qty = order_item_data.get("qty")
                         product_cost = qty * product.unit_price
                         total_items_cost += product_cost
-                        item_tax = generate_tax(product_cost)
+                        item_tax = generate_order_taxes(product_cost)
                         total_cost = product_cost + item_tax - item_discount
                         OrderItems.objects.create(
                             order=order,
@@ -720,7 +720,7 @@ class OrderSerializer(serializers.ModelSerializer):
                             total_cost=total_cost,
                         )
                 order.total_items_cost = total_items_cost
-                order_tax = generate_tax(total_items_cost)
+                order_tax = generate_order_taxes(total_items_cost)
                 total_order_cost = total_items_cost + order_tax - promo_code.value
                 order.total_order_cost = total_order_cost
                 order.save()
@@ -756,7 +756,7 @@ class OrderSerializer(serializers.ModelSerializer):
                         item_discount = product.discount
                         qty = order_item_data.get("qty")
                         product_cost = qty * product.unit_price
-                        item_tax = generate_tax(product_cost)
+                        item_tax = generate_order_taxes(product_cost)
                         # get applied promo code details
                         promo_code = PromoCode.objects.get(code=promo_code_data)
                         promo_code_value = promo_code.value
@@ -893,7 +893,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             try:
                 product_price = product.unit_cost
                 item_cost = product_price * qty
-                item_tax = generate_tax(item_cost, TAX_PERCENTAGE)
+                item_tax = generate_order_taxes(item_cost, TAX_PERCENTAGE)
                 OrderItems.objects.create(
                     order=order,
                     product=product,

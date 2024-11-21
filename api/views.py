@@ -9,7 +9,7 @@ from .serializers import (
     OrderDetailSerializer,
     OrderListSerializer,
     OrderEditSerializer,
-    OrderPaymentInfoSerializer,
+    PaymentInfoSerializer,
     ResetPasswordSerializer,
     SetNewPasswordSerializer,
 )
@@ -155,7 +155,7 @@ class OrderDetail(generics.RetrieveDestroyAPIView):
     
 
 class OrderPayment(generics.CreateAPIView):
-    serializer_class = OrderPaymentInfoSerializer
+    serializer_class = PaymentInfoSerializer
     queryset = PaymentInfo.objects.all()
     
 
