@@ -279,9 +279,6 @@ class ProductSerializer(serializers.ModelSerializer):
             name="Default Type"
         )
 
-        product_type_data = validated_data.pop("product_type", {})
-        grade_data = validated_data.pop("grade", {})
-        themes_data = validated_data.pop("themes", [])
         images_data = validated_data.pop("images", [])
 
         product_type = validated_data.pop("product_type", None)
@@ -318,26 +315,12 @@ class ProductSerializer(serializers.ModelSerializer):
                 **validated_data,
             )
 
-            thought_themes = []
-            if not themes_data:
-                thought_themes.append(self.default_theme)
-            else:
-                thought_themes = [
-                    ThoughtTheme.objects.get_or_create(name=theme_data["name"])[0]
-                    for theme_data in themes_data
-                    if "name" in theme_data
-                ]
 
             product.themes.set(thought_themes)
 
-            if sizes_data:
-                sizes = [
-                    Dimension.objects.get_or_create(
-                        width=size_data["width"], height=size_data["height"]
-                    )[0]
-                    for size_data in sizes_data
-                ]
-                product.sizes.set(sizes)
+
+            product.sizes.set(sizes)
+
 
             colors = []
             if colors_data:
@@ -350,14 +333,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
             product.colors.set(colors)
 
-            frame_types = []
-            if frame_types_data:
-                frame_types = [
-                    FrameType.objects.get_or_create(**frame_type_data)[0]
-                    for frame_type_data in frame_types_data
-                ]
-            else:
-                frame_types.append(self.default_frame_type)
+
             product.frame_types.set(frame_types)
 
             # Create images and link to product
