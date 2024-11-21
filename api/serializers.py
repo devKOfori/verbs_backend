@@ -402,31 +402,7 @@ class ProductSerializer(serializers.ModelSerializer):
         sizes = validated_data.pop("sizes", [])
         colors = validated_data.pop("colors", [])
         frame_types = validated_data.pop("frame_types", [])
-        # grade = validated_data.pop("grade", None)
-        # thought_themes = validated_data.pop("themes", None)
-        # product_type = None
-        # if not product_type_data:
-        #     product_type = self.default_type
-        # else:
-        #     try:
-        #         product_type = ProductType.objects.get(id=product_type_data.get("id"))
-        #     except ProductType.DoesNotExist:
-        #         raise serializers.ValidationError(
-        #             "Product type does not exist", code=status.HTTP_400_BAD_REQUEST
-        #         )
-
-
-        # grade = None
-        # if not grade_data:
-        #     grade = self.default_grade
-        # else:
-        #     try:
-        #         grade = ProductGrade.objects.get(id=grade_data.get("id"))
-        #     except ProductGrade.DoesNotExist:
-        #         raise serializers.ValidationError(
-        #             "Product grade does not exist", code=status.HTTP_400_BAD_REQUEST
-        #         )
-
+       
         with transaction.atomic():
             request = self.context.get("request")
             user = request.user if request else None
@@ -437,70 +413,12 @@ class ProductSerializer(serializers.ModelSerializer):
                 **validated_data,
             )
 
-            # thought_themes = []
-            # if not themes_data:
-            #     thought_themes.append(self.default_theme)
-            # else:
-            #     try:
-            #         print(themes_data)
-            #         thought_themes = [
-            #             ThoughtTheme.objects.get(id=theme_data.get("id"))
-            #             for theme_data in themes_data
-            #         ]
-            #     except ThoughtTheme.DoesNotExist:
-            #         raise serializers.ValidationError(
-            #             "A selected theme does not exist",
-            #             code=status.HTTP_400_BAD_REQUEST,
-            #         )
-
             product.themes.set(thought_themes)
-
-            # if sizes_data:
-            #     try:
-            #         sizes = [
-            #             Dimension.objects.get(id=size_data.get("id"))
-            #             for size_data in sizes_data
-            #         ]
-            #         product.sizes.set(sizes)
-            #     except Dimension.DoesNotExist:
-            #         raise serializers.ValidationError(
-            #             "A selected dimension does not exist",
-            #             code=status.HTTP_400_BAD_REQUEST,
-            #         )
 
             product.sizes.set(sizes)
 
-            # colors = []
-            # if colors_data:
-            #     try:
-            #         colors = [
-            #             Color.objects.get(id=color_data.get("id"))
-            #             for color_data in colors_data
-            #         ]
-            #     except Color.DoesNotExist:
-            #         raise serializers.ValidationError(
-            #             "A selected color does not exist",
-            #             code=status.HTTP_400_BAD_REQUEST,
-            #         )
-            # else:
-            #     colors.append(self.default_color)
-
             product.colors.set(colors)
 
-            # frame_types = []
-            # if frame_types_data:
-            #     try:
-            #         frame_types = [
-            #             FrameType.objects.get(id=frame_type_data.get("id"))
-            #             for frame_type_data in frame_types_data
-            #         ]
-            #     except FrameType.DoesNotExist:
-            #         raise serializers.ValidationError(
-            #             "A selected frame type does not exist",
-            #             code=status.HTTP_400_BAD_REQUEST,
-            #         )
-            # else:
-            #     frame_types.append(self.default_frame_type)
             product.frame_types.set(frame_types)
 
             # Create images and link to product
