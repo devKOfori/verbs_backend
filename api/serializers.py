@@ -213,6 +213,7 @@ class FrameTypeSerializer(serializers.ModelSerializer):
                     {"id": "Invalid frame type id. This frame type does not exist."}
                 )
         raise serializers.ValidationError({"id": "This field is required."})
+        # return data
 
     def to_representation(self, instance):
         """
@@ -348,7 +349,7 @@ class ProductSerializer(serializers.ModelSerializer):
     reviews = ProductReviewSerializer(many=True, read_only=True)
     themes = ThoughtThemeSerializer(many=True)
     colors = ColorSerializer(many=True)
-    frame_types = FrameTypeSerializer(many=True)
+    # frame_types = FrameTypeSerializer(many=True)
     sizes = DimensionSerializer(many=True)
 
     class Meta:
