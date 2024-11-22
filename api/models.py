@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django_countries.fields import CountryField
 from helpers.validators import validate_shipping_cost_percentage
@@ -8,13 +9,21 @@ from helpers.defaults import (
     product_grade_default,
     product_type_default,
     ORDER_QTY_DEFAULT,
+    PRODUCT_QTY_DEFAULT,
+    ORDER_DISCOUNT_DEFAULT,
     RESET_PASSWORD_STATUS_DEFAULT,
-    order_status_default,
+    get_default_order_status,
     order_payment_status_default,
+    product_frame_type_default,
+    product_color_default,
 )
 from helpers.storage_paths import product_image_storage_path
 from helpers.generators import generate_order_number
-from helpers.system_variables import UNREGISTERED_USER_EMAIL, UNREGISTERED_USER_PASSWORD
+from helpers.system_variables import (
+    UNREGISTERED_USER_EMAIL,
+    UNREGISTERED_USER_PASSWORD,
+    PROMO_CODE_STATUS_CHOICES,
+)
 
 # Create your models here.
 
@@ -104,6 +113,7 @@ class ResetPassword(models.Model):
 
 
 class ProductType(models.Model):
+    # eg. frame, other merch
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=255, db_index=True)
 
@@ -112,11 +122,57 @@ class ProductType(models.Model):
 
 
 class ProductGrade(models.Model):
+    # eg. essential, classic, premium, signature
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=255, db_index=True)
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        db_table = "productgrade"
+
+
+class ThoughtTheme(models.Model):
+    # eg. self-discovery, etc.
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = "thoughtheme"
+        verbose_name = "Thought Theme"
+        verbose_name_plural = "Thought Themes"
+
+
+class Color(models.Model):
+    # eg. black, etc.
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255, db_index=True)
+    code = models.CharField(max_length=16, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = "color"
+        verbose_name = "Color"
+        verbose_name_plural = "Colors"
+
+
+class FrameType(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255, db_index=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = "frametype"
+        verbose_name = "Frame Type"
+        verbose_name_plural = "Frame Types"
 
 
 class Product(models.Model):
@@ -134,18 +190,23 @@ class Product(models.Model):
         default=product_grade_default,
         related_name="products",
     )
-    unit_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-    availability = models.BooleanField(default=True)
+    themes = models.ManyToManyField(ThoughtTheme, related_name="products")
+    sizes = models.ManyToManyField("Dimension")
+    weight = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
+    colors = models.ManyToManyField(Color)
+    frame_types = models.ManyToManyField(FrameType)
+    unit_price = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    qty = models.PositiveIntegerField(default=PRODUCT_QTY_DEFAULT)
     description = models.TextField(default="-")
-    specifications = models.TextField(blank=True, null=True)
-    shipping_cost = models.PositiveIntegerField(default=0)
-    shipping_cost_percentage = models.PositiveIntegerField(
-        validators=[validate_shipping_cost_percentage], default=0
-    )
-    width = models.PositiveIntegerField(default=1)
-    height = models.PositiveIntegerField(default=1)
-    weight = models.PositiveIntegerField(default=0)
     return_policy = models.TextField(blank=True, null=True)
+    discount = models.DecimalField(max_digits=3, decimal_places=1, default=0.00)
+
+    added_at = models.DateTimeField(auto_now_add=True)
+    added_by = models.ForeignKey(
+        get_user_model(),
+        on_delete=models.SET_NULL,
+        null=True,
+    )
 
     def __str__(self) -> str:
         return self.name
@@ -154,6 +215,19 @@ class Product(models.Model):
         db_table = "product"
         verbose_name = "Product"
         verbose_name_plural = "Products"
+        ordering = ["-added_at"]
+
+
+class Dimension(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    width = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
+    height = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
+
+    def __str__(self) -> str:
+        return f"{self.width}x{self.height}"
+
+    class Meta:
+        db_table = "dimension"
 
 
 class ProductImage(models.Model):
@@ -195,11 +269,31 @@ class ProductReview(models.Model):
         ordering = ["-added_at"]
 
 
+class PromoCode(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    code = models.CharField(max_length=255, unique=True, db_index=True)
+    value = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    value_percentage = models.DecimalField(max_digits=3, decimal_places=1, default=0.00)
+    status = models.CharField(
+        max_length=7, choices=PROMO_CODE_STATUS_CHOICES, default="invalid"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return self.code
+
+    class Meta:
+        db_table = "promocode"
+        verbose_name = "Promo Code"
+        verbose_name_plural = "Promo Codes"
+
+
 class Order(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     order_number = models.CharField(
         max_length=255, unique=True, db_index=True, default=generate_order_number
     )
+    products = models.ManyToManyField(Product, through="OrderItems")
     order_date = models.DateTimeField(default=timezone.now)
     added_by = models.ForeignKey(
         Colleague,
@@ -208,27 +302,34 @@ class Order(models.Model):
         null=True,
         blank=True,
     )
-    products = models.ManyToManyField(Product, through="OrderItems")
     first_name = models.CharField(max_length=255, blank=True, null=True)
     last_name = models.CharField(max_length=255, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
     phone_number = models.CharField(max_length=255, blank=True, null=True)
-    shipping_country = CountryField()
-    shipping_address = models.TextField(blank=True, null=True)
     status = models.ForeignKey(
-        "OrderStatus", on_delete=models.SET_DEFAULT, default=order_status_default
+        "OrderStatus", on_delete=models.SET_DEFAULT, default=get_default_order_status
     )
-    items_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-    items_count = models.PositiveIntegerField(default=0)
     tax = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-    total_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-    created_at = models.DateTimeField(auto_now_add=True)
-    modified_at = models.DateTimeField(auto_now=True)
+    discount = models.DecimalField(
+        max_digits=3, decimal_places=1, default=ORDER_DISCOUNT_DEFAULT
+    )
+    promo_code = models.ForeignKey(
+        PromoCode, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    total_items_count = models.PositiveIntegerField(default=0)
+    total_items_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    shipping_cost = models.DecimalField(max_digits=6, decimal_places=2)
+    total_order_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
     payment_status = models.ForeignKey(
         "OrderPaymentStatus",
         on_delete=models.SET_DEFAULT,
         default=order_payment_status_default,
     )
+    accumulate_payment = models.BooleanField(
+        default=False
+    )  # this field specifies whether colleague wants to pay for item in small amounts. item is released when payment is complete
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
 
     def __str__(self) -> str:
         return f"{self.order_number}"
@@ -240,13 +341,42 @@ class Order(models.Model):
 class OrderItems(models.Model):
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.ForeignKey(
+        Product, on_delete=models.CASCADE, related_name="orders"
+    )
     qty = models.PositiveIntegerField(default=ORDER_QTY_DEFAULT)
     tax = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-    cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+    discount = models.DecimalField(max_digits=3, decimal_places=1, default=0)
+    promo_code = models.ForeignKey(PromoCode, on_delete=models.SET_NULL, null=True)
+    product_order_cost = models.DecimalField(
+        max_digits=6, decimal_places=2, default=0.00
+    )
+    total_cost = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 
     def __str__(self) -> str:
-        return f"ORDER - {self.id} --- [{self.product} - {self.qty}]"
+        return self.product.name
+
+    @property
+    def calculate_ordered_product_price(self):
+        """
+        this method returns the cost of a single ordered item
+        """
+        ordered_product_price = (
+            ((100 - (self.product.discount)) / 100) * self.product.unit_price
+        ) * self.qty
+        return ordered_product_price
+
+    @property
+    def calculate_ordered_product_total_cost(self):
+        if not self.promo_code:
+            return self.calculate_ordered_product_price
+        return self.calculate_ordered_product_price - self.promo_code.value
+
+    def get_total_cost(self):
+        """
+        this method returns the final cost of an ordered product
+        """
+        return
 
     class Meta:
         db_table = "orderitem"
@@ -255,7 +385,7 @@ class OrderItems(models.Model):
 
 
 class OrderPaymentStatus(models.Model):
-    id = models.UUIDField(default=uuid.uuid4(), primary_key=True)
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=255, unique=True, db_index=True)
 
     def __str__(self) -> str:
@@ -268,7 +398,7 @@ class OrderPaymentStatus(models.Model):
 
 
 class OrderStatus(models.Model):
-    id = models.UUIDField(default=uuid.uuid4(), primary_key=True)
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=255, unique=True, db_index=True)
 
     def __str__(self) -> str:
@@ -278,3 +408,51 @@ class OrderStatus(models.Model):
         db_table = "orderstatus"
         verbose_name = "Order Status"
         verbose_name_plural = "Order Statuses"
+
+
+class ShippingInfo(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    order = models.OneToOneField(
+        Order, on_delete=models.CASCADE, related_name="shipping_info"
+    )
+    # shipping_country = CountryField()
+    shipping_address = models.TextField(blank=True, null=True)
+    shipping_cost = models.DecimalField(max_digits=4, decimal_places=2)
+    delivery_period = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self) -> str:
+        return self.shipping_address
+
+    class Meta:
+        db_table = "shippinginfo"
+        verbose_name = "Shipping Info"
+        verbose_name_plural = "Shipping Infos"
+
+
+class PaymentMethod(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class PaymentInfo(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="payments")
+    payment_method = models.ForeignKey(
+        PaymentMethod, on_delete=models.SET_NULL, null=True
+    )
+    transaction_id = models.CharField(
+        max_length=255, unique=True, null=True, blank=True
+    )
+    payment_date = models.DateTimeField(auto_now_add=True)
+    amount_paid = models.DecimalField(max_digits=6, decimal_places=2)
+
+    def __str__(self) -> str:
+        return self.transaction_id
+
+    class Meta:
+        db_table = "paymentinfo"
+        verbose_name = "Payment Info"
+        verbose_name_plural = "Payment Infos"

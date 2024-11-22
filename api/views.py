@@ -1,14 +1,15 @@
 import pytz
-from django.shortcuts import render
-from .models import Colleague, Product, Order, ResetPassword
+from .models import Colleague, Product, ResetPassword, Order, PaymentInfo
 from .serializers import (
     CreateColleagueSerializer,
     ColleagueSerializer,
     ProductListSerializer,
-    ProductDetailSerializer,
+    ProductSerializer,
+    OrderSerializer,
     OrderDetailSerializer,
     OrderListSerializer,
     OrderEditSerializer,
+    PaymentInfoSerializer,
     ResetPasswordSerializer,
     SetNewPasswordSerializer,
 )
@@ -16,9 +17,10 @@ from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import permissions, exceptions, status
-from rest_framework.views import APIView
 from datetime import datetime, timedelta
 from helpers.defaults import TOKEN_EXPIRY_HOURS
+import django_filters
+from django_filters import rest_framework as filters
 
 # Create your views here.
 
@@ -31,7 +33,7 @@ class RegisterColleague(generics.CreateAPIView):
 class ColleagueList(generics.ListAPIView):
     queryset = Colleague.objects.all()
     serializer_class = ColleagueSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
 
 
 class ColleagueDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -99,35 +101,68 @@ class ResetPasswordTokenView(generics.GenericAPIView):
             )
 
 
+class ProductFilter(django_filters.FilterSet):
+    unit_price = django_filters.RangeFilter()
+
+    class Meta:
+        model = Product
+        fields = {
+            "name": ["exact"],
+            "grade__name": ["exact"],
+            "themes__name": ["exact"],
+            "sizes__width": ["lte", "gte"],
+            "sizes__height": ["lte", "gte"],
+            "weight": ["lte", "gte"],
+            "colors__name": ["exact"],
+        }
+
+
 class ProductList(generics.ListAPIView):
     serializer_class = ProductListSerializer
     queryset = Product.objects.all()
+    filter_backends = [filters.DjangoFilterBackend]
+    filterset_class = ProductFilter
+
+
+class ProductCreate(generics.CreateAPIView):
+    serializer_class = ProductSerializer
+    queryset = Product.objects.all()
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class ProductDetail(generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = ProductDetailSerializer
+    serializer_class = ProductSerializer
     queryset = Product.objects.all()
 
 
 class OrderList(generics.ListAPIView):
     serializer_class = OrderListSerializer
     queryset = Order.objects.all()
+    
 
 
 class OrderCreate(generics.CreateAPIView):
-    serializer_class = OrderDetailSerializer
+    serializer_class = OrderSerializer
     queryset = Order.objects.all()
+    
 
 
 class OrderDetail(generics.RetrieveDestroyAPIView):
-    serializer_class = OrderDetailSerializer
+    serializer_class = OrderSerializer
     queryset = Order.objects.all()
     lookup_field = "order_number"
     lookup_url_kwarg = "order_number"
+    
+
+class OrderPayment(generics.CreateAPIView):
+    serializer_class = PaymentInfoSerializer
+    queryset = PaymentInfo.objects.all()
+    
 
 
-class OrderEdit(generics.UpdateAPIView):
-    serializer_class = OrderEditSerializer
-    queryset = Order.objects.all()
-    lookup_field = "order_number"
-    lookup_url_kwarg = "order_number"
+# class OrderEdit(generics.UpdateAPIView):
+#     serializer_class = OrderEditSerializer
+#     queryset = Order.objects.all()
+#     lookup_field = "order_number"
+#     lookup_url_kwarg = "order_number"
+
