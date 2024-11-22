@@ -145,7 +145,12 @@ class ProductTests(APITestCase):
             "images": [],
             "return_policy": "",
         }
-        response = self.client.post(url, data=payload, content_type="application/json", headers={"Authorization": f"Bearer {tokens.get("access")}"})
+        response = self.client.post(
+            url,
+            data=payload,
+            content_type="application/json",
+            headers={"Authorization": f"Bearer {tokens.get("access")}"},
+        )
 
 
 class OrderTests(APITestCase):
@@ -163,6 +168,8 @@ class OrderTests(APITestCase):
             "last_name": "Ofori-Mensah",
             "email": "oforimensahebenezer07@gmail.com",
         }
-        response = self.client.post(path=url, data=data, content_type="application/json")
+        response = self.client.post(
+            path=url, data=data, content_type="application/json"
+        )
         print(response.data)
         self.assertEqual(response.status_code, 201)

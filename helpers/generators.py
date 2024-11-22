@@ -1,5 +1,6 @@
 import uuid
 from helpers.defaults import ITEM_TAX_DEFAULT
+from helpers.system_variables import TAXES
 
 
 def generate_order_number() -> str:
@@ -8,8 +9,8 @@ def generate_order_number() -> str:
 
 
 def generate_order_taxes(
-    items_cost: float, tax_percentage: dict = ITEM_TAX_DEFAULT
-) -> float:
+    items_cost: float, tax_percentage: dict = TAXES
+) -> dict:
     taxes = {}
     for tax, percentage in tax_percentage.items():
         taxes[tax] = (percentage / 100) * float(items_cost)

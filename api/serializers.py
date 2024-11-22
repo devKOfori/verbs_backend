@@ -707,35 +707,42 @@ class OrderSerializer(serializers.ModelSerializer):
                 # create related shipping information
                 ShippingInfo.objects.create(
                     # order=order, shipping_country=None, **shipping_info_data
-                    order=order, **shipping_info_data
+                    order=order,
+                    **shipping_info_data,
                 )
+
                 # creating associated order items
                 order_items = []
                 total_items_cost = 0
                 total_order_cost = 0
+                # print(f"order items: {order_items_data}")
                 for order_item_data in order_items_data:
                     item_id = order_item_data.pop("id", "")
                     if item_id:
                         product = Product.objects.get(id=item_id)
                         item_discount = product.discount
                         qty = order_item_data.get("qty")
-                        product_cost = qty * product.unit_price
-                        total_items_cost += product_cost
-                        item_tax = generate_order_taxes(product_cost)
-                        total_cost = product_cost + item_tax - item_discount
+                        product_order_cost = float(qty * product.unit_price)
+                        total_items_cost += product_order_cost
+                        item_taxes = generate_order_taxes(product_order_cost)
+                        total_item_tax = float(sum(item_taxes.values()))
+                        total_cost = product_order_cost + total_item_tax - float(item_discount)
+                        print(f"item_tax: {total_item_tax}")
                         OrderItems.objects.create(
                             order=order,
                             product=product,
                             qty=qty,
-                            tax=item_tax,
+                            tax=total_item_tax,
                             discount=item_discount,
                             promo_code=promo_code,
-                            product_cost=product_cost,
+                            product_order_cost=product_order_cost,
                             total_cost=total_cost,
                         )
                 order.total_items_cost = total_items_cost
-                order_tax = generate_order_taxes(total_items_cost)
-                total_order_cost = total_items_cost + order_tax - promo_code.value
+                order_tax = float(sum(generate_order_taxes(total_items_cost).values()))
+                promo_code_value = float(promo_code.value) if promo_code else 0.00
+                total_order_cost = total_items_cost + order_tax - promo_code_value
+                print(f"order.total_items_cost: {order.total_items_cost}")
                 order.total_order_cost = total_order_cost
                 order.save()
             return order
