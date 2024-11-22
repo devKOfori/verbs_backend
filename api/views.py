@@ -9,7 +9,7 @@ from .serializers import (
     OrderDetailSerializer,
     OrderListSerializer,
     OrderEditSerializer,
-    OrderPaymentInfoSerializer,
+    PaymentInfoSerializer,
     ResetPasswordSerializer,
     SetNewPasswordSerializer,
 )
@@ -127,7 +127,7 @@ class ProductList(generics.ListAPIView):
 class ProductCreate(generics.CreateAPIView):
     serializer_class = ProductSerializer
     queryset = Product.objects.all()
-    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class ProductDetail(generics.RetrieveUpdateDestroyAPIView):
@@ -155,7 +155,7 @@ class OrderDetail(generics.RetrieveDestroyAPIView):
     
 
 class OrderPayment(generics.CreateAPIView):
-    serializer_class = OrderPaymentInfoSerializer
+    serializer_class = PaymentInfoSerializer
     queryset = PaymentInfo.objects.all()
     
 

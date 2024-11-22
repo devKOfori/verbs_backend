@@ -1,9 +1,17 @@
 import requests
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from .models import Colleague, ResetPassword
 from oauth2_provider.models import Application
 from datetime import datetime, timedelta
+import uuid
+import requests
+from dotenv import load_dotenv
+import os
+
+load_dotenv("../.env")
 
 
 class ColleagueRegistrationAPITests(APITestCase):
