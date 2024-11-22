@@ -200,7 +200,7 @@ class FrameTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = FrameType
         fields = ["id", "name"]
-        read_only_fields = ["id"]
+        # read_only_fields = ["id"]
 
     def to_internal_value(self, data):
         if isinstance(data, dict) and "id" in data:
@@ -348,7 +348,7 @@ class ProductSerializer(serializers.ModelSerializer):
     reviews = ProductReviewSerializer(many=True, read_only=True)
     themes = ThoughtThemeSerializer(many=True)
     colors = ColorSerializer(many=True)
-    # frame_types = FrameTypeSerializer(many=True)
+    frame_types = FrameTypeSerializer(many=True)
     sizes = DimensionSerializer(many=True)
 
     class Meta:
@@ -417,6 +417,7 @@ class ProductSerializer(serializers.ModelSerializer):
                     for image_data in images_data
                 ]
             )
+            return product
 
     def update(self, instance, validated_data):
         product_type_data = validated_data.pop("product_type", {})
@@ -656,6 +657,7 @@ class OrderSerializer(serializers.ModelSerializer):
         this method validates whether user information
         has been included in the order details
         """
+        print(f"data: {data}")
         self.user = self.context["request"].user if "request" in self.context else None
         if not self.user or self.user.is_anonymous:
             if not all(
@@ -666,7 +668,8 @@ class OrderSerializer(serializers.ModelSerializer):
                 ]
             ):
                 raise exceptions.ValidationError(
-                    "Sign in or fill in the necessary details",
+                    # "Sign in or fill in the necessary details",
+                    "An error has occured",
                     code=status.HTTP_400_BAD_REQUEST,
                 )
         return data
