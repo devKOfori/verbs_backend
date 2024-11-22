@@ -206,6 +206,7 @@ class FrameTypeSerializer(serializers.ModelSerializer):
         if isinstance(data, dict) and "id" in data:
             try:
                 frame_type = FrameType.objects.get(id=data["id"])
+                print(f"here... {frame_type}")
                 return frame_type
             except FrameType.DoesNotExist:
                 raise serializers.ValidationError(
@@ -573,7 +574,7 @@ class OrderListSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class PromoCodeSerializer(serializers.ModelSerializer):
-    code = serializers.CharField(blank=True)
+    code = serializers.CharField(allow_blank=True)
 
     class Meta:
         model = PromoCode
