@@ -200,7 +200,7 @@ class FrameTypeSerializer(serializers.ModelSerializer):
     class Meta:
         model = FrameType
         fields = ["id", "name"]
-        read_only_fields = ["id"]
+        # read_only_fields = ["id"]
 
     def to_internal_value(self, data):
         if isinstance(data, dict) and "id" in data:
@@ -348,7 +348,7 @@ class ProductSerializer(serializers.ModelSerializer):
     reviews = ProductReviewSerializer(many=True, read_only=True)
     themes = ThoughtThemeSerializer(many=True)
     colors = ColorSerializer(many=True)
-    # frame_types = FrameTypeSerializer(many=True)
+    frame_types = FrameTypeSerializer(many=True)
     sizes = DimensionSerializer(many=True)
 
     class Meta:
@@ -417,6 +417,7 @@ class ProductSerializer(serializers.ModelSerializer):
                     for image_data in images_data
                 ]
             )
+            return product
 
     def update(self, instance, validated_data):
         product_type_data = validated_data.pop("product_type", {})
