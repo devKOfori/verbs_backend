@@ -573,7 +573,7 @@ class OrderListSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class PromoCodeSerializer(serializers.ModelSerializer):
-    code = serializers.CharField(blank=True)
+    code = serializers.CharField(allow_blank=True)
 
     class Meta:
         model = PromoCode
@@ -655,6 +655,7 @@ class OrderSerializer(serializers.ModelSerializer):
         this method validates whether user information
         has been included in the order details
         """
+        print(f"data: {data}")
         self.user = self.context["request"].user if "request" in self.context else None
         if not self.user or self.user.is_anonymous:
             if not all(
@@ -665,7 +666,8 @@ class OrderSerializer(serializers.ModelSerializer):
                 ]
             ):
                 raise exceptions.ValidationError(
-                    "Sign in or fill in the necessary details",
+                    # "Sign in or fill in the necessary details",
+                    "An error has occured",
                     code=status.HTTP_400_BAD_REQUEST,
                 )
         return data
