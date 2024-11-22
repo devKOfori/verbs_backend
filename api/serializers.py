@@ -640,6 +640,10 @@ class OrderSerializer(serializers.ModelSerializer):
             "total_order_cost",
             "payment_status",
             "shipping_info",
+            "added_by",
+            "first_name",
+            "last_name",
+            "email",
         ]
         read_only_fields = [
             "id",
@@ -650,6 +654,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "shipping_cost",
             "total_order_cost",
             "payment_status",
+            "added_by",
         ]
 
     def validate(self, data: dict):
@@ -668,8 +673,8 @@ class OrderSerializer(serializers.ModelSerializer):
                 ]
             ):
                 raise exceptions.ValidationError(
-                    # "Sign in or fill in the necessary details",
-                    "An error has occured",
+                    "Sign in or fill in the necessary details",
+                    # "An error has occured",
                     code=status.HTTP_400_BAD_REQUEST,
                 )
         return data
@@ -701,7 +706,8 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
                 # create related shipping information
                 ShippingInfo.objects.create(
-                    order=order, shipping_country=None, **shipping_info_data
+                    # order=order, shipping_country=None, **shipping_info_data
+                    order=order, **shipping_info_data
                 )
                 # creating associated order items
                 order_items = []
