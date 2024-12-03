@@ -12,6 +12,8 @@ ITEM_TAX_DEFAULT = 0
 
 RESET_PASSWORD_STATUS_DEFAULT = "new"
 
+SHIPPING_COST_DEFAULT = 0.00
+
 
 def get_walk_in_colleague():
     Colleague = apps.get_model("api", "Colleague")

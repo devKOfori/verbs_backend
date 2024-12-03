@@ -12,6 +12,7 @@ from helpers.defaults import (
     PRODUCT_QTY_DEFAULT,
     ORDER_DISCOUNT_DEFAULT,
     RESET_PASSWORD_STATUS_DEFAULT,
+    SHIPPING_COST_DEFAULT,
     get_default_order_status,
     order_payment_status_default,
     product_frame_type_default,
@@ -417,7 +418,9 @@ class ShippingInfo(models.Model):
     )
     # shipping_country = CountryField()
     shipping_address = models.TextField(blank=True, null=True)
-    shipping_cost = models.DecimalField(max_digits=4, decimal_places=2)
+    shipping_cost = models.DecimalField(
+        max_digits=4, decimal_places=2, default=SHIPPING_COST_DEFAULT
+    )
     delivery_period = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self) -> str:

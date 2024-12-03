@@ -167,5 +167,8 @@ SOCIAL_AUTH_FACEBOOK_SECRET = os.getenv("SOCIAL_AUTH_FACEBOOK_SECRET")
 SOCIAL_AUTH_FACEBOOK_SCOPE = ["email"]
 SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {"fields": "id, name, email"}
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

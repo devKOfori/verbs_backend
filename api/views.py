@@ -43,7 +43,7 @@ class ColleagueDetail(generics.RetrieveUpdateDestroyAPIView):
     # permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
 
-def is_past_hours(datetime_field, hours):
+def is_token_expired(datetime_field, hours):
     """
     Check if the datetime_field is past the specified number of hours from the current time.
 
@@ -66,16 +66,17 @@ class ResetPasswordView(generics.CreateAPIView):
 
 class ResetPasswordTokenView(generics.GenericAPIView):
     serializer_class = SetNewPasswordSerializer
+    queryset = ResetPassword.objects.all()
 
     def get(self, request, *args, **kwargs):
         token = kwargs.get("token")
         try:
             reset_password = ResetPassword.objects.get(token=token)
-            if is_past_hours(reset_password.created_at, TOKEN_EXPIRY_HOURS):
+            if is_token_expired(reset_password.created_at, TOKEN_EXPIRY_HOURS):
                 raise exceptions.ValidationError(
                     "Token has expired. Request a new token"
                 )
-            return Response({"message": "valid token"}, status=status.HTTP_200_OK)
+            return Response({"message": "Valid token. Continue to login."}, status=status.HTTP_200_OK)
         except ResetPassword.DoesNotExist:
             raise exceptions.ValidationError(
                 "Token does not exist", code=status.HTTP_400_BAD_REQUEST
