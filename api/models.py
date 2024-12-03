@@ -1,3 +1,4 @@
+from typing import Iterable
 import uuid
 from django.db import models
 from django.utils import timezone
@@ -60,21 +61,26 @@ class Colleague(AbstractBaseUser):
     )
     first_name = models.CharField(max_length=255, blank=True, null=True)
     last_name = models.CharField(max_length=255, blank=True, null=True)
-    full_name = models.CharField(max_length=255, editable=False, null=True)
     date_of_birth = models.DateField(null=True, blank=True)
     address = models.TextField(blank=True, null=True)
     phone_number = models.CharField(max_length=255, blank=True, null=True)
     country = CountryField(blank_label="(Select Country)", blank=True, null=True)
     is_active = models.BooleanField(default=True)
-    is_admin = models.BooleanField(default=False)
-    is_staff = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    registration_date = models.DateTimeField(auto_now_add=True)
+    is_employee = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["first_name", "last_name"]
 
     objects = ColleagueManager()
 
-    def __str__(self) -> str:
+    @property
+    def full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+    def __str__(self) -> str:
+        return self.full_clean
 
     def has_module_perms(self, app_label):
         return True
@@ -93,6 +99,53 @@ RESET_PASSWORD_STATUS_CHOICES = {
     ("used", "Used"),
     ("expired", "Expired"),
 }
+
+
+class Staff(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    user = models.OneToOneField(Colleague, on_delete=models.CASCADE)
+    role = models.ForeignKey("Role", on_delete=models.SET_NULL, null=True)
+    Department = models.ForeignKey("Department", on_delete=models.SET_NULL, null=True)
+
+    def save(self, **kwargs) -> None:
+        super().save(**kwargs)
+        # update employee status on user account
+        try:
+            self.user.is_employee = True
+            self.user.save()
+        except Exception as e:
+            print(f"Error updating colleague employee status: {e}")
+
+    def __str__(self) -> str:
+        return self.user.email
+    
+    class Meta:
+        db_table = "staff"
+
+
+class Role(models.Model):
+    # eg. Director, HOD, etc
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255)
+
+    def __str__(self) -> str:
+        return self.name
+
+    class Meta:
+        db_table = "role"
+    
+
+class Department(models.Model):
+    # eg. Sales, Marketing and Finance, Procurement & Product Dev't, etc.
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255)
+
+    def __str__(self) -> str:
+        return self.name
+    
+    class Meta:
+        db_table = "department"
+
 
 
 class ResetPassword(models.Model):
