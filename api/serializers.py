@@ -1,5 +1,5 @@
 import datetime
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMessage, BadHeaderError
 from django.db import transaction, IntegrityError
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import exceptions
@@ -78,21 +78,38 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
         email = validated_data.get("email")
         token = generate_reset_password_token()
         if not Colleague.objects.filter(email=email).exists():
-            raise exceptions.ValidationError(
+            raise serializers.ValidationError(
                 "Email not found", code=status.HTTP_400_BAD_REQUEST
             )
-        reset_password = ResetPassword.objects.create(
+        # reset_password = ResetPassword.objects.create(
+        #     email=email,
+        #     token=token,
+        # )
+        # if reset_password:
+        #     email = EmailMessage(
+        #         subject="Password reset request",
+        #         body=f"Follow the link to reset your password http://localhost:8000/reset?token={token}",
+        #         from_email="oforimensahebenezer07@gmail.com",
+        #         to=["quameophory@yahoo.com"],
+        #     )
+        #     email.send()
+        try:
+            reset_password = ResetPassword.objects.create(
             email=email,
             token=token,
-        )
-        if reset_password:
+            )
             email = EmailMessage(
-                subject="Password reset request",
-                body=f"Follow the link to reset your password http://localhost:8000/reset?token={token}",
+                subject="Password reset link",
+                body=f"Follow the link to reset your password http://localhost:8000/reset?token={token}. Token expires after 1 hour.",
                 from_email="oforimensahebenezer07@gmail.com",
                 to=["quameophory@yahoo.com"],
             )
             email.send()
+        except BadHeaderError:
+            print("Couldn't send email. Invalid header found.")
+        except Exception as e:
+            print("Couldn't create a reset password link", e)
+
         return reset_password
 
 
@@ -113,8 +130,8 @@ class SetNewPasswordSerializer(serializers.Serializer):
             colleague.set_password(new_password)
             colleague.save()
             reset_password.delete()
-        except ResetPassword.DoesNotExist:
-            raise serializers.ValidationError("Invalid or expired token")
+        except (ResetPassword.DoesNotExist, Colleague.DoesNotExist):
+            raise serializers.ValidationError("Invalid token or email")
 
 
 class ProductTypeSerializer(serializers.ModelSerializer):
