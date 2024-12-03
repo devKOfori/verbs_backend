@@ -66,10 +66,11 @@ class Colleague(AbstractBaseUser):
     phone_number = models.CharField(max_length=255, blank=True, null=True)
     country = CountryField(blank_label="(Select Country)", blank=True, null=True)
     is_active = models.BooleanField(default=True)
-    is_admin = models.BooleanField(default=False)
-    is_staff = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+    registration_date = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["first_name", "last_name"]
 
     objects = ColleagueManager()
 
@@ -93,6 +94,43 @@ RESET_PASSWORD_STATUS_CHOICES = {
     ("used", "Used"),
     ("expired", "Expired"),
 }
+
+
+class Staff(models.Model):
+    user = models.OneToOneField(Colleague, on_delete=models.CASCADE, primary_key=True)
+    role = models.ForeignKey("Role", on_delete=models.SET_NULL, null=True)
+    Department = models.ForeignKey("Department", on_delete=models.SET_NULL, null=True)
+
+    def __str__(self) -> str:
+        return self.user
+    
+    class Meta:
+        db_table = "staff"
+
+
+class Role(models.Model):
+    # eg. Director, HOD, etc
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255)
+
+    def __str__(self) -> str:
+        return self.name
+
+    class Meta:
+        db_table = "role"
+    
+
+class Department(models.Model):
+    # eg. Sales, Marketing and Finance, Procurement & Product Dev't, etc.
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255)
+
+    def __str__(self) -> str:
+        return self.name
+    
+    class Meta:
+        db_table = "department"
+
 
 
 class ResetPassword(models.Model):
