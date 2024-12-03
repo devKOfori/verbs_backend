@@ -1,3 +1,4 @@
+from typing import Iterable
 import uuid
 from django.db import models
 from django.utils import timezone
@@ -68,6 +69,7 @@ class Colleague(AbstractBaseUser):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     registration_date = models.DateTimeField(auto_now_add=True)
+    is_employee = models.BooleanField(default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
@@ -100,6 +102,16 @@ class Staff(models.Model):
     user = models.OneToOneField(Colleague, on_delete=models.CASCADE, primary_key=True)
     role = models.ForeignKey("Role", on_delete=models.SET_NULL, null=True)
     Department = models.ForeignKey("Department", on_delete=models.SET_NULL, null=True)
+
+    def save(self, **kwargs) -> None:
+        super().save(**kwargs)
+        # update employee status on user account
+        try:
+            colleague = Colleague.objects.get(id=kwargs.get("user"))
+            colleague.is_employee = True
+            colleague.save()
+        except Colleague.DoesNotExist:
+            print("Couldn't find user account.")
 
     def __str__(self) -> str:
         return self.user
