@@ -61,7 +61,6 @@ class Colleague(AbstractBaseUser):
     )
     first_name = models.CharField(max_length=255, blank=True, null=True)
     last_name = models.CharField(max_length=255, blank=True, null=True)
-    full_name = models.CharField(max_length=255, editable=False, null=True)
     date_of_birth = models.DateField(null=True, blank=True)
     address = models.TextField(blank=True, null=True)
     phone_number = models.CharField(max_length=255, blank=True, null=True)
@@ -76,8 +75,12 @@ class Colleague(AbstractBaseUser):
 
     objects = ColleagueManager()
 
-    def __str__(self) -> str:
+    @property
+    def full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+    def __str__(self) -> str:
+        return self.full_clean
 
     def has_module_perms(self, app_label):
         return True
@@ -99,7 +102,8 @@ RESET_PASSWORD_STATUS_CHOICES = {
 
 
 class Staff(models.Model):
-    user = models.OneToOneField(Colleague, on_delete=models.CASCADE, primary_key=True)
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    user = models.OneToOneField(Colleague, on_delete=models.CASCADE)
     role = models.ForeignKey("Role", on_delete=models.SET_NULL, null=True)
     Department = models.ForeignKey("Department", on_delete=models.SET_NULL, null=True)
 
@@ -107,14 +111,13 @@ class Staff(models.Model):
         super().save(**kwargs)
         # update employee status on user account
         try:
-            colleague = Colleague.objects.get(id=kwargs.get("user"))
-            colleague.is_employee = True
-            colleague.save()
-        except Colleague.DoesNotExist:
-            print("Couldn't find user account.")
+            self.user.is_employee = True
+            self.user.save()
+        except Exception as e:
+            print(f"Error updating colleague employee status: {e}")
 
     def __str__(self) -> str:
-        return self.user
+        return self.user.email
     
     class Meta:
         db_table = "staff"
