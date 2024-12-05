@@ -33,10 +33,11 @@ class RegisterColleague(generics.CreateAPIView):
     queryset = Colleague.objects.all()
     serializer_class = CreateColleagueSerializer
 
+
 def github_webhook(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         # Optional: Validate GitHub signature (recommended for security)
-        event = request.headers.get('X-GitHub-Event', 'ping')
+        event = request.headers.get("X-GitHub-Event", "ping")
         if event == "push":
             repo_dir = "/home/verbsmerch/"
             commands = [
@@ -44,13 +45,12 @@ def github_webhook(request):
                 "git fetch origin",
                 "git reset --hard origin/main",
                 "source /home/verbsmerch/.virtualenvs/verbs_venv/bin/activate && pip install -r requirements.txt",
-                "touch /var/www/verbsmerch_pythonanywhere_com_wsgi.py"  # Reload the app
+                "touch /var/www/verbsmerch_pythonanywhere_com_wsgi.py",  # Reload the app
             ]
             for command in commands:
                 subprocess.run(command, shell=True, check=True)
             return JsonResponse({"message": "Code updated successfully"})
         return JsonResponse({"message": "Unhandled event"}, status=400)
-    
 
 
 class ColleagueList(generics.ListAPIView):
@@ -99,7 +99,10 @@ class ResetPasswordTokenView(generics.GenericAPIView):
                 raise exceptions.ValidationError(
                     "Token has expired. Request a new token"
                 )
-            return Response({"message": "Valid token. Continue to login."}, status=status.HTTP_200_OK)
+            return Response(
+                {"message": "Valid token. Continue to login."},
+                status=status.HTTP_200_OK,
+            )
         except ResetPassword.DoesNotExist:
             raise exceptions.ValidationError(
                 "Token does not exist", code=status.HTTP_400_BAD_REQUEST
@@ -162,13 +165,11 @@ class ProductDetail(generics.RetrieveUpdateDestroyAPIView):
 class OrderList(generics.ListAPIView):
     serializer_class = OrderListSerializer
     queryset = Order.objects.all()
-    
 
 
 class OrderCreate(generics.CreateAPIView):
     serializer_class = OrderSerializer
     queryset = Order.objects.all()
-    
 
 
 class OrderDetail(generics.RetrieveDestroyAPIView):
@@ -176,12 +177,11 @@ class OrderDetail(generics.RetrieveDestroyAPIView):
     queryset = Order.objects.all()
     lookup_field = "order_number"
     lookup_url_kwarg = "order_number"
-    
+
 
 class OrderPayment(generics.CreateAPIView):
     serializer_class = PaymentInfoSerializer
     queryset = PaymentInfo.objects.all()
-    
 
 
 # class OrderEdit(generics.UpdateAPIView):
@@ -189,4 +189,3 @@ class OrderPayment(generics.CreateAPIView):
 #     queryset = Order.objects.all()
 #     lookup_field = "order_number"
 #     lookup_url_kwarg = "order_number"
-
