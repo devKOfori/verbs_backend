@@ -36,7 +36,7 @@ class RegisterColleague(generics.CreateAPIView):
 
 def github_webhook(request):
     if request.method == "POST":
-        # Optional: Validate GitHub signature (recommended for security)
+        # Validate GitHub signature (recommended for security)
         event = request.headers.get("X-GitHub-Event", "ping")
         if event == "push":
             repo_dir = "/home/verbsmerch/"
