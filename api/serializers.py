@@ -41,12 +41,12 @@ from helpers.defaults import (
 
 
 class CreateColleagueSerializer(serializers.ModelSerializer):
-    # confirm_password = serializers.CharField(write_only=True, max_length=255)
+    confirm_password = serializers.CharField(max_length=255)
     password = serializers.CharField(write_only=True, max_length=255)
 
     class Meta:
         model = Colleague
-        fields = ["email", "password"]
+        fields = ["email", "password", "confirm_password"]
 
     def create(self, validated_data: dict):
         # validated_data.pop("confirm_password")
@@ -95,8 +95,8 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
         #     email.send()
         try:
             reset_password = ResetPassword.objects.create(
-            email=email,
-            token=token,
+                email=email,
+                token=token,
             )
             email = EmailMessage(
                 subject="Password reset link",
@@ -743,7 +743,9 @@ class OrderSerializer(serializers.ModelSerializer):
                         total_items_cost += product_order_cost
                         item_taxes = generate_order_taxes(product_order_cost)
                         total_item_tax = float(sum(item_taxes.values()))
-                        total_cost = product_order_cost + total_item_tax - float(item_discount)
+                        total_cost = (
+                            product_order_cost + total_item_tax - float(item_discount)
+                        )
                         print(f"item_tax: {total_item_tax}")
                         OrderItems.objects.create(
                             order=order,

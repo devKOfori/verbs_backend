@@ -21,6 +21,10 @@ from datetime import datetime, timedelta
 from helpers.defaults import TOKEN_EXPIRY_HOURS
 import django_filters
 from django_filters import rest_framework as filters
+import os
+import subprocess
+from django.http import JsonResponse, HttpResponseBadRequest
+
 
 # Create your views here.
 
@@ -28,6 +32,25 @@ from django_filters import rest_framework as filters
 class RegisterColleague(generics.CreateAPIView):
     queryset = Colleague.objects.all()
     serializer_class = CreateColleagueSerializer
+
+def github_webhook(request):
+    if request.method == 'POST':
+        # Optional: Validate GitHub signature (recommended for security)
+        event = request.headers.get('X-GitHub-Event', 'ping')
+        if event == "push":
+            repo_dir = "/home/verbsmerch/"
+            commands = [
+                f"cd {repo_dir}",
+                "git fetch origin",
+                "git reset --hard origin/main",
+                "source /home/verbsmerch/.virtualenvs/verbs_venv/bin/activate && pip install -r requirements.txt",
+                "touch /var/www/verbsmerch_pythonanywhere_com_wsgi.py"  # Reload the app
+            ]
+            for command in commands:
+                subprocess.run(command, shell=True, check=True)
+            return JsonResponse({"message": "Code updated successfully"})
+        return JsonResponse({"message": "Unhandled event"}, status=400)
+    
 
 
 class ColleagueList(generics.ListAPIView):

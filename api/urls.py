@@ -24,5 +24,6 @@ urlpatterns = [
     # path(
     #     "orders/<str:order_number>/edit/", views.OrderEdit.as_view(), name="order-edit"
     # ),
+    path('github-webhook/', views.github_webhook, name='github_webhook'),
 ]
 urlpatterns = format_suffix_patterns(urlpatterns)
