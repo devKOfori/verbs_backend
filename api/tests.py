@@ -20,7 +20,8 @@ class ColleagueRegistrationAPITests(APITestCase):
         data = {
             "email": "testuser@testdomain.com",
             "password": "secret",
-            "confirm_password": "secret",
+            "first_name": "Test",
+            "last_name": "User",
         }
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 201)

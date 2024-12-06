@@ -1,6 +1,11 @@
 import uuid
+import random
 from helpers.defaults import ITEM_TAX_DEFAULT
 from helpers.system_variables import TAXES
+
+
+def generate_registration_code(code_length: int = 5) -> str:
+    return "".join([str(n) for n in random.choices(population=range(100), k=code_length)])
 
 
 def generate_order_number() -> str:
@@ -8,9 +13,7 @@ def generate_order_number() -> str:
     return order_number
 
 
-def generate_order_taxes(
-    items_cost: float, tax_percentage: dict = TAXES
-) -> dict:
+def generate_order_taxes(items_cost: float, tax_percentage: dict = TAXES) -> dict:
     taxes = {}
     for tax, percentage in tax_percentage.items():
         taxes[tax] = (percentage / 100) * float(items_cost)

@@ -16,3 +16,5 @@ PROMO_CODE_STATUS_CHOICES = {
 TAXES = {
     "VAT": 0,
 }
+
+SENDER_EMAIL = "oforimensahebenezer07@gmail.com"
