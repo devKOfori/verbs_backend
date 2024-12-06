@@ -43,7 +43,6 @@ from helpers.defaults import (
 
 
 class CreateColleagueSerializer(serializers.ModelSerializer):
-    confirm_password = serializers.CharField(max_length=255)
     password = serializers.CharField(write_only=True, max_length=255)
 
     class Meta:
@@ -51,8 +50,6 @@ class CreateColleagueSerializer(serializers.ModelSerializer):
         fields = ["email", "password", "first_name", "last_name"]
 
     def create(self, validated_data: dict):
-        print("here...")
-        # validated_data.pop("confirm_password")
         confirmation_code = generate_registration_code()
 
         try:
