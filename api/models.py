@@ -56,7 +56,7 @@ class ConfirmationCodeStatus(models.Model):
 
     def __str__(self):
         return self.name
-    
+
     class Meta:
         db_table = "registrationconfirmationstatus"
 
@@ -140,7 +140,7 @@ class Staff(models.Model):
 
 
 class Role(models.Model):
-    # eg. Director, HOD, etc
+    # eg. Director, HOD, Regular
     id = models.UUIDField(default=uuid.uuid4, primary_key=True)
     name = models.CharField(max_length=255)
 
