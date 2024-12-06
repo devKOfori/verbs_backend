@@ -31,16 +31,14 @@ from helpers.system_variables import (
 
 
 class ColleagueManager(BaseUserManager):
-    def create_user(self, email, password=None):
+    def create_user(self, email, password=None, **kwargs):
         if not email:
             raise ValueError("Email is required to create an account")
 
         if email == UNREGISTERED_USER_EMAIL:
             password = UNREGISTERED_USER_PASSWORD
 
-        user = self.model(
-            email=self.normalize_email(email),
-        )
+        user = self.model(email=self.normalize_email(email), **kwargs)
         user.set_password(password)
         user.save(using=self._db)
         return user
@@ -50,6 +48,14 @@ class ColleagueManager(BaseUserManager):
         user.is_admin = True
         user.save(using=self._db)
         return user
+
+
+class ConfirmationCodeStatus(models.Model):
+    id = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return self.name
 
 
 class Colleague(AbstractBaseUser):
@@ -69,6 +75,13 @@ class Colleague(AbstractBaseUser):
     is_staff = models.BooleanField(default=False)
     registration_date = models.DateTimeField(auto_now_add=True)
     is_employee = models.BooleanField(default=False)
+    is_account_confirmed = models.BooleanField(default=False)
+    confirmation_code = models.CharField(
+        max_length=255, unique=True, null=True, blank=True
+    )
+    confirmation_code_status = models.ForeignKey(
+        ConfirmationCodeStatus, on_delete=models.SET_NULL, null=True
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
@@ -118,7 +131,7 @@ class Staff(models.Model):
 
     def __str__(self) -> str:
         return self.user.email
-    
+
     class Meta:
         db_table = "staff"
 
@@ -133,7 +146,7 @@ class Role(models.Model):
 
     class Meta:
         db_table = "role"
-    
+
 
 class Department(models.Model):
     # eg. Sales, Marketing and Finance, Procurement & Product Dev't, etc.
@@ -142,10 +155,9 @@ class Department(models.Model):
 
     def __str__(self) -> str:
         return self.name
-    
+
     class Meta:
         db_table = "department"
-
 
 
 class ResetPassword(models.Model):

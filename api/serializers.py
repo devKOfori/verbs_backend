@@ -26,17 +26,19 @@ from .models import (
     ShippingInfo,
 )
 import uuid
-from helpers.system_variables import TAX_PERCENTAGE, UNREGISTERED_USER_EMAIL
+from helpers.system_variables import TAX_PERCENTAGE, UNREGISTERED_USER_EMAIL, SENDER_EMAIL
 from helpers.generators import (
     generate_order_taxes,
     generate_reset_password_token,
     generate_shipping_cost,
+    generate_registration_code,
 )
 from helpers.defaults import (
     product_type_default,
     product_grade_default,
     product_color_default,
     default_payment_status,
+    default_confirmation_code_status,
 )
 
 
@@ -46,13 +48,51 @@ class CreateColleagueSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Colleague
-        fields = ["email", "password", "confirm_password"]
+        fields = ["email", "password", "first_name", "last_name"]
 
     def create(self, validated_data: dict):
+        print("here...")
         # validated_data.pop("confirm_password")
-        colleague = Colleague.objects.create_user(
-            validated_data["email"], validated_data["password"]
-        )
+        confirmation_code = generate_registration_code()
+
+        try:
+            colleague = Colleague.objects.create_user(
+                validated_data["email"],
+                validated_data["password"],
+                first_name=validated_data["first_name"],
+                last_name=validated_data["last_name"],
+                confirmation_code=confirmation_code,
+                confirmation_code_status=default_confirmation_code_status(),
+                is_account_confirmed=False,
+            )
+        except Exception as e:
+            raise serializers.ValidationError(
+                f"An error occured creating colleague account {e}"                
+            )
+        else:
+            email_body = f"""
+                Hi {colleague.first_name},
+                Complete your registration with this one-time security code:
+                {confirmation_code}
+                
+                Ignore this message if you have not registered with us.
+
+                Thank you,
+                Verbs Team.
+            """
+            
+            email = EmailMessage(
+                subject="Confirm your registration",
+                body=email_body,
+                from_email=SENDER_EMAIL,
+                to=[colleague.email],
+            )
+            try:
+                email.send()
+            except Exception as email_error:
+                raise serializers.ValidationError(
+                    f"Account created but failed to send confirmation email: {email_error}"
+                )
         return colleague
 
     # def validate(self, data: dict):

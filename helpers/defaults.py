@@ -35,6 +35,13 @@ def default_payment_status():
     )
     return default_payment_status
 
+def default_confirmation_code_status():
+    ConfirmationCodeStatus = apps.get_model("api", "ConfirmationCodeStatus")
+    default_confirmation_code_status, _ = ConfirmationCodeStatus.objects.get_or_create(
+        name="Default Status"
+    )
+    return default_confirmation_code_status
+
 
 def product_grade_default():
     ProductGrade = apps.get_model("api", "ProductGrade")
