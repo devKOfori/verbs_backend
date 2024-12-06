@@ -92,13 +92,6 @@ class CreateColleagueSerializer(serializers.ModelSerializer):
                 )
         return colleague
 
-    # def validate(self, data: dict):
-    #     if data["password"] != data["confirm_password"]:
-    #         raise exceptions.ValidationError(
-    #             "Passwords are different", status.HTTP_400_BAD_REQUEST
-    #         )
-    #     return data
-
 
 class ColleagueSerializer(serializers.ModelSerializer):
     class Meta:
