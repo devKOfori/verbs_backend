@@ -26,7 +26,11 @@ from .models import (
     ShippingInfo,
 )
 import uuid
-from helpers.system_variables import TAX_PERCENTAGE, UNREGISTERED_USER_EMAIL, SENDER_EMAIL
+from helpers.system_variables import (
+    TAX_PERCENTAGE,
+    UNREGISTERED_USER_EMAIL,
+    SENDER_EMAIL,
+)
 from helpers.generators import (
     generate_order_taxes,
     generate_reset_password_token,
@@ -64,7 +68,7 @@ class CreateColleagueSerializer(serializers.ModelSerializer):
             )
         except Exception as e:
             raise serializers.ValidationError(
-                f"An error occured creating colleague account {e}"                
+                f"An error occured creating colleague account {e}"
             )
         else:
             email_body = f"""
@@ -77,7 +81,7 @@ class CreateColleagueSerializer(serializers.ModelSerializer):
                 Thank you,
                 Verbs Team.
             """
-            
+
             email = EmailMessage(
                 subject="Confirm your registration",
                 body=email_body,
@@ -91,6 +95,13 @@ class CreateColleagueSerializer(serializers.ModelSerializer):
                     f"Account created but failed to send confirmation email: {email_error}"
                 )
         return colleague
+
+    # def validate(self, data: dict):
+    #     if data["password"] != data["confirm_password"]:
+    #         raise exceptions.ValidationError(
+    #             "Passwords are different", status.HTTP_400_BAD_REQUEST
+    #         )
+    #     return data
 
 
 class ColleagueSerializer(serializers.ModelSerializer):
