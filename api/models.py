@@ -96,7 +96,7 @@ class Colleague(AbstractBaseUser):
         return f"{self.first_name} {self.last_name}"
 
     def __str__(self) -> str:
-        return self.full_clean
+        return self.full_name
 
     def has_module_perms(self, app_label):
         return True
