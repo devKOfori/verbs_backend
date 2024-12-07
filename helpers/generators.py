@@ -5,7 +5,7 @@ from helpers.system_variables import TAXES
 
 
 def generate_registration_code(code_length: int = 5) -> str:
-    return "".join([str(n) for n in random.choices(population=range(100), k=code_length)])
+    return "".join([str(n) for n in random.choices(population=range(10), k=code_length)])
 
 
 def generate_order_number() -> str:
