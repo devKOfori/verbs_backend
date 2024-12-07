@@ -1,5 +1,12 @@
 import pytz
-from .models import Colleague, Product, ResetPassword, Order, PaymentInfo
+from .models import (
+    Colleague,
+    Product,
+    ResetPassword,
+    Order,
+    PaymentInfo,
+    ConfirmationCodeStatus,
+)
 from .serializers import (
     CreateColleagueSerializer,
     ColleagueSerializer,
@@ -17,6 +24,7 @@ from rest_framework.response import Response
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework import permissions, exceptions, status
+from rest_framework.views import APIView
 from datetime import datetime, timedelta
 from helpers.defaults import TOKEN_EXPIRY_HOURS
 import django_filters
@@ -32,6 +40,67 @@ from django.http import JsonResponse, HttpResponseBadRequest
 class RegisterColleague(generics.CreateAPIView):
     queryset = Colleague.objects.all()
     serializer_class = CreateColleagueSerializer
+
+
+class ConfirmRegistrationView(APIView):
+    def post(self, request, *args, **kwargs):
+        SUCCESS_MESSAGE = "Account confirmed successfully."
+        INVALID_CODE_MESSAGE = "Invalid confirmation code."
+        ACCOUNT_NOT_FOUND_MESSAGE = "No account exists with the provided email."
+
+        email = request.data.get("email")
+        confirmation_code = request.data.get("confirmation_code")
+
+        print(f"confirmation_code: {confirmation_code}")
+
+        if not email or not confirmation_code:
+            return Response(
+                {"error": "Email and confirmation code are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            # Get the "Valid" status object
+            valid_status = ConfirmationCodeStatus.objects.get(name="Valid")
+        except ConfirmationCodeStatus.DoesNotExist:
+            return Response(
+                {"error": "Configuration error: Valid status not found."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        try:
+            # Get the "Invalid" status object
+            invalid_status = ConfirmationCodeStatus.objects.get(name="Invalid")
+        except ConfirmationCodeStatus.DoesNotExist:
+            return Response(
+                {"error": "Configuration error: Invalid status not found."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        try:
+            # Retrieve the account
+            registered_account = Colleague.objects.get(email=email)
+            print(f"confirmation_status: {registered_account.confirmation_code_status}")
+        except Colleague.DoesNotExist:
+            return Response(
+                {"error": ACCOUNT_NOT_FOUND_MESSAGE},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check the confirmation code and status
+        if (
+            registered_account.confirmation_code == confirmation_code
+            and registered_account.confirmation_code_status == valid_status
+        ):
+            registered_account.is_account_confirmed = True
+            registered_account.confirmation_code_status = invalid_status
+            registered_account.save()
+            return Response({"message": SUCCESS_MESSAGE}, status=status.HTTP_200_OK)
+        else:
+            return Response(
+                {"error": INVALID_CODE_MESSAGE},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 def github_webhook(request):

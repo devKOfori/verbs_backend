@@ -38,7 +38,7 @@ def default_payment_status():
 def default_confirmation_code_status():
     ConfirmationCodeStatus = apps.get_model("api", "ConfirmationCodeStatus")
     default_confirmation_code_status, _ = ConfirmationCodeStatus.objects.get_or_create(
-        name="Default Status"
+        name="Valid"
     )
     return default_confirmation_code_status
 
