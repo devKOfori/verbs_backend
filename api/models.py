@@ -85,6 +85,7 @@ class Colleague(AbstractBaseUser):
     confirmation_code_status = models.ForeignKey(
         ConfirmationCodeStatus, on_delete=models.SET_NULL, null=True
     )
+    created_at = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["first_name", "last_name"]
